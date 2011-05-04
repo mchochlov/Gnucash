@@ -114,9 +114,22 @@ test_book_validate_counter( void )
     g_free(r);
 }
 
+static void
+test_book_get_string_option( Fixture *fixture, gconstpointer pData )
+{
+    const char *opt_name = "Option Name";
+    const char *opt_value = "Option Value";
+    const char *opt_name_notset = "Not Set";
+    g_assert( fixture->book != NULL );
+    qof_book_set_string_option( fixture->book, opt_name, opt_value);
+    g_assert_cmpstr( qof_book_get_string_option( fixture->book, opt_name ), ==, opt_value);
+    g_assert_cmpstr( qof_book_get_string_option( fixture->book, opt_name_notset ), ==, NULL );
+}
+
 void
 test_suite_qofbook ( void )
 {
     g_test_add( suitename, Fixture, NULL, setup, test_book_readonly, teardown );
     g_test_add_func( suitename, test_book_validate_counter );
+    g_test_add( suitename, Fixture, NULL, setup, test_book_get_string_option, teardown );
 }
