@@ -151,6 +151,21 @@ test_book_not_saved( Fixture *fixture, gconstpointer pData )
     g_assert( qof_book_not_saved( fixture->book ) );
 }
 
+static void
+test_book_mark_saved( Fixture *fixture, gconstpointer pData )
+{
+    time_t dirty_time, clean_time;
+    
+    qof_book_mark_dirty( fixture-> book );
+    g_assert( qof_book_not_saved( fixture->book ) );
+    dirty_time = qof_book_get_dirty_time( fixture->book );
+    qof_book_mark_saved( fixture->book );
+    clean_time = qof_book_get_dirty_time( fixture->book );
+    g_assert( !qof_book_not_saved( fixture->book ) );
+    g_assert( dirty_time != clean_time );
+    g_assert( clean_time == 0);
+}
+
 
 void
 test_suite_qofbook ( void )
@@ -160,4 +175,5 @@ test_suite_qofbook ( void )
     g_test_add( suitename, Fixture, NULL, setup, test_book_get_string_option, teardown );
     g_test_add( suitename, Fixture, NULL, setup, test_book_set_string_option, teardown );
     g_test_add( suitename, Fixture, NULL, setup, test_book_not_saved, teardown );
+    g_test_add( suitename, Fixture, NULL, setup, test_book_mark_saved, teardown );
 }
