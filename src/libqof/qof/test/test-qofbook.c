@@ -198,6 +198,39 @@ test_book_get_counter( Fixture *fixture, gconstpointer pData )
     g_assert_cmpint( counter, ==, 1 );
 }
 
+static void
+test_book_get_counter_format ( Fixture *fixture, gconstpointer pData )
+{
+    const char *counter_name = "Counter name";
+    const char *counter_name_not_set = "Counter name not set";
+    gchar *r;
+    gint64 counter;
+    
+    /* need this as long as we have fatal warnings enabled */
+    g_test_log_set_fatal_handler ( ( GTestLogFatalFunc )handle_faults, NULL );
+    
+    g_test_message( "Testing counter format when book is null" );
+    r = qof_book_get_counter_format( NULL, counter_name );
+    g_assert_cmpstr( r, ==, NULL );
+    
+    g_test_message( "Testing counter format when counter name is null" );
+    r = qof_book_get_counter_format( fixture->book, NULL );
+    g_assert_cmpstr( r, ==, NULL );
+    
+    g_test_message( "Testing counter format when counter name is empty string" );
+    r = qof_book_get_counter_format( fixture->book, '\0' );
+    g_assert_cmpstr( r, ==, NULL );
+    
+    g_test_message( "Testing counter format with existing counter" );
+    counter = qof_book_get_counter( fixture->book, counter_name );
+    r = qof_book_get_counter_format( fixture->book, counter_name );
+    g_assert_cmpstr( r, ==, "%.6" G_GINT64_FORMAT);
+    
+    g_test_message( "Testing counter format for default value" );
+    r = qof_book_get_counter_format( fixture->book, counter_name );
+    g_assert_cmpstr( r, ==, "%.6" G_GINT64_FORMAT);
+}
+
 void
 test_suite_qofbook ( void )
 {
@@ -208,4 +241,5 @@ test_suite_qofbook ( void )
     g_test_add( suitename, Fixture, NULL, setup, test_book_not_saved, teardown );
     g_test_add( suitename, Fixture, NULL, setup, test_book_mark_saved, teardown );
     g_test_add( suitename, Fixture, NULL, setup, test_book_get_counter, teardown );
+    g_test_add( suitename, Fixture, NULL, setup, test_book_get_counter_format, teardown );
 }
