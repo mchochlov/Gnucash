@@ -45,6 +45,12 @@ teardown( Fixture *fixture, gconstpointer pData )
     qof_book_destroy( fixture->book );
 }
 
+static gboolean
+handle_faults ( const char * log_domain, GLogLevelFlags log_level, const gchar *msg, gpointer user_data)
+{
+    return FALSE;
+}
+
 static void
 test_book_readonly( Fixture *fixture, gconstpointer pData )
 {
@@ -166,6 +172,31 @@ test_book_mark_saved( Fixture *fixture, gconstpointer pData )
     g_assert( clean_time == 0);
 }
 
+static void
+test_book_get_counter( Fixture *fixture, gconstpointer pData )
+{
+    const char *counter_name = "Counter name";
+    gint64 counter;
+    
+    /* need this as long as we have fatal warnings enabled */
+    g_test_log_set_fatal_handler ( ( GTestLogFatalFunc )handle_faults, NULL );
+    
+    counter = qof_book_get_counter( NULL, counter_name );
+    g_assert_cmpint( counter, ==, -1 );
+    
+    counter = qof_book_get_counter( fixture->book, NULL );
+    g_assert_cmpint( counter, ==, -1 );
+    
+    counter = qof_book_get_counter( fixture->book, '\0' );
+    g_assert_cmpint( counter, ==, -1 );
+    
+    counter = qof_book_get_counter( fixture->book, counter_name );
+    g_assert_cmpint( counter, ==, 0 );
+    
+    qof_book_increment_and_format_counter( fixture->book, counter_name );
+    counter = qof_book_get_counter( fixture->book, counter_name );
+    g_assert_cmpint( counter, ==, 1 );
+}
 
 void
 test_suite_qofbook ( void )
@@ -176,4 +207,5 @@ test_suite_qofbook ( void )
     g_test_add( suitename, Fixture, NULL, setup, test_book_set_string_option, teardown );
     g_test_add( suitename, Fixture, NULL, setup, test_book_not_saved, teardown );
     g_test_add( suitename, Fixture, NULL, setup, test_book_mark_saved, teardown );
+    g_test_add( suitename, Fixture, NULL, setup, test_book_get_counter, teardown );
 }
