@@ -231,6 +231,51 @@ test_book_get_counter_format ( Fixture *fixture, gconstpointer pData )
     g_assert_cmpstr( r, ==, "%.6" G_GINT64_FORMAT);
 }
 
+static void
+test_book_increment_and_format_counter ( Fixture *fixture, gconstpointer pData )
+{
+    const char *counter_name = "Counter name";
+    gchar *format;
+    gchar *r;
+    gint64 counter;
+    
+    /* need this as long as we have fatal warnings enabled */
+    g_test_log_set_fatal_handler ( ( GTestLogFatalFunc )handle_faults, NULL );
+    
+    g_test_message( "Testing increment and format when book is null" );
+    r = qof_book_increment_and_format_counter( NULL, counter_name );
+    g_assert_cmpstr( r, ==, NULL );
+    g_free( r );
+    
+    g_test_message( "Testing increment and format when counter name is null" );
+    r = qof_book_increment_and_format_counter( fixture->book, NULL );
+    g_assert_cmpstr( r, ==, NULL );
+    g_free( r );
+    
+    g_test_message( "Testing increment and format when counter name is empty string" );
+    r = qof_book_increment_and_format_counter( fixture->book, '\0' );
+    g_assert_cmpstr( r, ==, NULL );
+    g_free( r );
+    
+    g_test_message( "Testing increment and format with new counter" );
+    r = qof_book_increment_and_format_counter( fixture->book, counter_name );
+    counter = qof_book_get_counter( fixture->book, counter_name );
+    format = qof_book_get_counter_format( fixture->book, counter_name );
+    g_assert_cmpint( counter, ==, 1 );
+    g_assert( qof_book_not_saved( fixture->book ) );
+    g_assert_cmpstr( r, ==, g_strdup_printf( format, counter ));
+    g_free( r );
+    
+    g_test_message( "Testing increment and format with existing counter" );
+    r = qof_book_increment_and_format_counter( fixture->book, counter_name );
+    counter = qof_book_get_counter( fixture->book, counter_name );
+    format = qof_book_get_counter_format( fixture->book, counter_name );
+    g_assert_cmpint( counter, ==, 2 );
+    g_assert_cmpstr( r, ==, g_strdup_printf( format, counter ));
+    g_free( r );
+}
+
+
 void
 test_suite_qofbook ( void )
 {
@@ -242,4 +287,5 @@ test_suite_qofbook ( void )
     g_test_add( suitename, Fixture, NULL, setup, test_book_mark_saved, teardown );
     g_test_add( suitename, Fixture, NULL, setup, test_book_get_counter, teardown );
     g_test_add( suitename, Fixture, NULL, setup, test_book_get_counter_format, teardown );
+    g_test_add( suitename, Fixture, NULL, setup, test_book_increment_and_format_counter, teardown );
 }
