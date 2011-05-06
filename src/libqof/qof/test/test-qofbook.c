@@ -275,6 +275,14 @@ test_book_increment_and_format_counter ( Fixture *fixture, gconstpointer pData )
     g_free( r );
 }
 
+static void
+test_book_kvp_changed( Fixture *fixture, gconstpointer pData )
+{
+    g_test_message( "Testing book is marked dirty after kvp_changed" );
+    g_assert( !qof_book_not_saved( fixture->book ) );
+    qof_book_kvp_changed( fixture->book );
+    g_assert( qof_book_not_saved( fixture->book ) );
+}
 
 void
 test_suite_qofbook ( void )
@@ -288,4 +296,5 @@ test_suite_qofbook ( void )
     g_test_add( suitename, Fixture, NULL, setup, test_book_get_counter, teardown );
     g_test_add( suitename, Fixture, NULL, setup, test_book_get_counter_format, teardown );
     g_test_add( suitename, Fixture, NULL, setup, test_book_increment_and_format_counter, teardown );
+    g_test_add( suitename, Fixture, NULL, setup, test_book_kvp_changed, teardown );
 }
