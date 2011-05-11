@@ -65,6 +65,18 @@ Otherwise, only failures are printed out.
     g_free( testpath );\
 }
 
+/** 
+ * Use this macro to format informative test path output when using g_test_add_func.
+ * Suite stands for tests' pack, while path for individual test name. 
+*/
+
+#define GNC_TEST_ADD_FUNC( suite, path, test )\
+{\
+    gchar *testpath = g_strdup_printf( "%s/%s", suite, path );\
+    g_test_add_func( testpath, test );\
+    g_free( testpath );\
+}
+
 /* Privately used to indicate a test result. You may use these if you
  * wish, but it's easier to use the do_test macro above.
  */
