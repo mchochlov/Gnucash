@@ -25,6 +25,7 @@
 #include "qof.h"
 #include "qofbook-p.h"
 #include "qofbookslots.h"
+#include "test-stuff.h"
 
 static const gchar *suitename = "/qof/qofbook";
 void test_suite_qofbook ( void );
@@ -314,15 +315,15 @@ test_book_use_trading_accounts( Fixture *fixture, gconstpointer pData )
 void
 test_suite_qofbook ( void )
 {
-    g_test_add( suitename, Fixture, NULL, setup, test_book_readonly, teardown );
-    g_test_add_func( suitename, test_book_validate_counter );
-    g_test_add( suitename, Fixture, NULL, setup, test_book_get_string_option, teardown );
-    g_test_add( suitename, Fixture, NULL, setup, test_book_set_string_option, teardown );
-    g_test_add( suitename, Fixture, NULL, setup, test_book_not_saved, teardown );
-    g_test_add( suitename, Fixture, NULL, setup, test_book_mark_saved, teardown );
-    g_test_add( suitename, Fixture, NULL, setup, test_book_get_counter, teardown );
-    g_test_add( suitename, Fixture, NULL, setup, test_book_get_counter_format, teardown );
-    g_test_add( suitename, Fixture, NULL, setup, test_book_increment_and_format_counter, teardown );
-    g_test_add( suitename, Fixture, NULL, setup, test_book_kvp_changed, teardown );
-    g_test_add( suitename, Fixture, NULL, setup, test_book_use_trading_accounts, teardown );
+    GNC_TEST_ADD( suitename, "readonly", Fixture, NULL, setup, test_book_readonly, teardown );
+    GNC_TEST_ADD_FUNC( suitename, "validate counter", test_book_validate_counter );
+    GNC_TEST_ADD( suitename, "get string option", Fixture, NULL, setup, test_book_get_string_option, teardown );
+    GNC_TEST_ADD( suitename, "set string option", Fixture, NULL, setup, test_book_set_string_option, teardown );
+    GNC_TEST_ADD( suitename, "not saved", Fixture, NULL, setup, test_book_not_saved, teardown );
+    GNC_TEST_ADD( suitename, "mark saved", Fixture, NULL, setup, test_book_mark_saved, teardown );
+    GNC_TEST_ADD( suitename, "get counter", Fixture, NULL, setup, test_book_get_counter, teardown );
+    GNC_TEST_ADD( suitename, "get counter format", Fixture, NULL, setup, test_book_get_counter_format, teardown );
+    GNC_TEST_ADD( suitename, "increment and format counter", Fixture, NULL, setup, test_book_increment_and_format_counter, teardown );
+    GNC_TEST_ADD( suitename, "kvp changed", Fixture, NULL, setup, test_book_kvp_changed, teardown );
+    GNC_TEST_ADD( suitename, "use trading accounts", Fixture, NULL, setup, test_book_use_trading_accounts, teardown );
 }
