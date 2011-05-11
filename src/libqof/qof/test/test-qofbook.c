@@ -53,6 +53,12 @@ handle_faults ( const char * log_domain, GLogLevelFlags log_level, const gchar *
     return FALSE;
 }
 
+/* mock dirty callback function */
+static void
+mock_dirty_cb (QofBook *book, gboolean dirty, gpointer user_data)
+{
+}
+
 static void
 test_book_readonly( Fixture *fixture, gconstpointer pData )
 {
@@ -312,6 +318,45 @@ test_book_use_trading_accounts( Fixture *fixture, gconstpointer pData )
     
 }
 
+static void
+test_book_mark_dirty( Fixture *fixture, gconstpointer pData )
+{
+    QofBook *_empty = NULL;
+    time_t before, after;
+  
+    g_test_message( "Testing when book is NULL" );
+    qof_book_mark_dirty( _empty );
+    g_assert( _empty == NULL );
+    
+    g_test_message( "Testing when book is not dirty and dirty_cb is null" );
+    g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), ==, 0);
+    g_assert( fixture->book->dirty_cb == NULL );
+    g_assert( qof_book_not_saved( fixture->book ) == FALSE );
+    qof_book_mark_dirty( fixture->book );
+    g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), !=, 0);
+    g_assert( fixture->book->dirty_cb == NULL );
+    g_assert( qof_book_not_saved( fixture->book ) == TRUE );
+    
+    g_test_message( "Testing when book is not dirty and dirty_cb is not null" );
+    qof_book_mark_saved( fixture->book );
+    qof_book_set_dirty_cb( fixture->book, mock_dirty_cb, NULL );
+    g_assert( fixture->book->dirty_cb != NULL );
+    g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), ==, 0);
+    g_assert( qof_book_not_saved( fixture->book ) == FALSE );
+    qof_book_mark_dirty( fixture->book );
+    g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), !=, 0);
+    g_assert( fixture->book->dirty_cb != NULL );
+    g_assert( qof_book_not_saved( fixture->book ) == TRUE );
+    
+    g_test_message( "Testing when book is dirty" );
+    g_assert( qof_book_not_saved( fixture->book ) == TRUE );
+    before = qof_book_get_dirty_time( fixture->book );
+    qof_book_mark_dirty( fixture->book );
+    g_assert( qof_book_not_saved( fixture->book ) == TRUE );
+    after = qof_book_get_dirty_time( fixture->book );
+    g_assert_cmpint( before, ==, after );
+}
+
 void
 test_suite_qofbook ( void )
 {
@@ -326,4 +371,5 @@ test_suite_qofbook ( void )
     GNC_TEST_ADD( suitename, "increment and format counter", Fixture, NULL, setup, test_book_increment_and_format_counter, teardown );
     GNC_TEST_ADD( suitename, "kvp changed", Fixture, NULL, setup, test_book_kvp_changed, teardown );
     GNC_TEST_ADD( suitename, "use trading accounts", Fixture, NULL, setup, test_book_use_trading_accounts, teardown );
+    GNC_TEST_ADD( suitename, "mark dirty", Fixture, NULL, setup, test_book_mark_dirty, teardown );
 }
