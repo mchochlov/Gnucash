@@ -371,6 +371,25 @@ test_book_get_dirty_time( Fixture *fixture, gconstpointer pData )
     g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), >, 0);
 }
 
+static void
+test_book_set_dirty_cb( Fixture *fixture, gconstpointer pData )
+{
+    g_test_message( "Testing when callback is previously not set" );
+    g_assert( fixture->book->dirty_cb == NULL );
+    qof_book_set_dirty_cb( fixture->book, mock_dirty_cb, NULL );
+    g_assert( fixture->book->dirty_cb == mock_dirty_cb );
+    g_assert( fixture->book->dirty_data == NULL );
+    
+    /* need this as long as we have fatal warnings enabled */
+    g_test_log_set_fatal_handler ( ( GTestLogFatalFunc )handle_faults, NULL );
+    
+    g_test_message( "Testing when callback was previously set" );
+    g_assert( fixture->book->dirty_cb != NULL );
+    qof_book_set_dirty_cb( fixture->book, NULL, NULL );
+    g_assert( fixture->book->dirty_cb == NULL );
+    g_assert( fixture->book->dirty_data == NULL );
+}
+
 void
 test_suite_qofbook ( void )
 {
@@ -387,4 +406,5 @@ test_suite_qofbook ( void )
     GNC_TEST_ADD( suitename, "use trading accounts", Fixture, NULL, setup, test_book_use_trading_accounts, teardown );
     GNC_TEST_ADD( suitename, "mark dirty", Fixture, NULL, setup, test_book_mark_dirty, teardown );
     GNC_TEST_ADD( suitename, "dirty time", Fixture, NULL, setup, test_book_get_dirty_time, teardown );
+    GNC_TEST_ADD( suitename, "set dirty callback", Fixture, NULL, setup, test_book_set_dirty_cb, teardown );
 }
