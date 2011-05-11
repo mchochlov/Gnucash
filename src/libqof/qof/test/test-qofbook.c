@@ -390,6 +390,19 @@ test_book_set_dirty_cb( Fixture *fixture, gconstpointer pData )
     g_assert( fixture->book->dirty_data == NULL );
 }
 
+static void
+test_book_shutting_down( Fixture *fixture, gconstpointer pData )
+{
+    g_test_message( "Testing when book is null" );
+    g_assert( qof_book_shutting_down( NULL ) == FALSE );
+    g_test_message( "Testing when shutting down is true" );
+    fixture->book->shutting_down = TRUE;
+    g_assert( qof_book_shutting_down( fixture->book ) == TRUE );
+    g_test_message( "Testing when shutting down is false" );
+    fixture->book->shutting_down = FALSE;
+    g_assert( qof_book_shutting_down( fixture->book ) == FALSE );
+}
+
 void
 test_suite_qofbook ( void )
 {
@@ -407,4 +420,5 @@ test_suite_qofbook ( void )
     GNC_TEST_ADD( suitename, "mark dirty", Fixture, NULL, setup, test_book_mark_dirty, teardown );
     GNC_TEST_ADD( suitename, "dirty time", Fixture, NULL, setup, test_book_get_dirty_time, teardown );
     GNC_TEST_ADD( suitename, "set dirty callback", Fixture, NULL, setup, test_book_set_dirty_cb, teardown );
+    GNC_TEST_ADD( suitename, "shutting down", Fixture, NULL, setup, test_book_shutting_down, teardown );
 }
