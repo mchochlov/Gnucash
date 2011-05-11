@@ -484,6 +484,8 @@ function inst_gnome() {
         quiet ${PKG_CONFIG} --atleast-version=${GCONF_VERSION} gconf-2.0 &&
         quiet ${PKG_CONFIG} --atleast-version=${GTK_VERSION} gtk+-2.0 &&
         quiet ${PKG_CONFIG} --atleast-version=${CAIRO_VERSION} cairo &&
+        quiet ${PKG_CONFIG} --atleast-version=${PIXMAN_VERSION} pixman-1 &&
+        quiet ${PKG_CONFIG} --exact-version=${LIBXML2_VERSION} libxml-2.0 &&
         quiet intltoolize --version
     then
         echo "gnome packages installed in $_GNOME_UDIR.  skipping."
@@ -588,41 +590,54 @@ EOF
             rm -rf $TMP_UDIR/gtk-doc-*
         qpopd
 
-        if [ "$CROSS_COMPILE" = "yes" ]; then
-            qpushd $_GNOME_UDIR/lib/pkgconfig
-                perl -pi.bak -e"s!^prefix=.*\$!prefix=$_GNOME_UDIR!" *.pc
-                #perl -pi.bak -e's!^Libs: !Libs: -L\${prefix}/bin !' *.pc
+        if quiet ${PKG_CONFIG} --exact-version=${PIXMAN_VERSION} pixman-1 ; then
+            echo "Pixman already compiled+installed"
+        else
+            wget_unpacked $PIXMAN_URL $DOWNLOAD_DIR $TMP_DIR
+            assert_one_dir $TMP_UDIR/pixman-*
+            qpushd $TMP_UDIR/pixman-*
+	        GLIB_CPPFLAGS=`${PKG_CONFIG} --cflags glib-2.0`
+                GTK_CPPFLAGS="-I${_GNOME_UDIR}/include/gtk-2.0"
+                ./configure ${HOST_XCOMPILE} \
+                    --prefix=$_GNOME_UDIR \
+                    --disable-static \
+                    CPPFLAGS="${GLIB_CPPFLAGS} ${GTK_CPPFLAGS}"
+                make
+                make install
             qpopd
+            rm -rf $TMP_UDIR/pixman-*
+        fi
+        quiet ${PKG_CONFIG} --exact-version=${PIXMAN_VERSION} pixman-1 || die "pixman not installed correctly"
+
+        if quiet ${PKG_CONFIG} --exact-version=${LIBXML2_VERSION} libxml-2.0 ; then
+            echo "Libxml2 already compiled + installed"
+        else
+            wget_unpacked $LIBXML2_SRC_URL $DOWNLOAD_DIR $TMP_DIR
+            assert_one_dir $TMP_UDIR/libxml2-*
+            qpushd $TMP_UDIR/libxml2-*
+                ./configure ${HOST_XCOMPILE} \
+                    --prefix=${_GNOME_UDIR} \
+                    --disable-static \
+                    --with-python=no \
+                    --without-threads
+                make
+                make install
+            qpopd
+            rm -rf ${TMP_UDIR}/libxml2-*
         fi
 
-        wget_unpacked $PIXMAN_URL $DOWNLOAD_DIR $TMP_DIR
-        assert_one_dir $TMP_UDIR/pixman-*
-        qpushd $TMP_UDIR/pixman-*
-	    GLIB_CPPFLAGS=`${PKG_CONFIG} --cflags glib-2.0`
-	    GTK_CPPFLAGS="-I${_GNOME_UDIR}/include/gtk-2.0"
-            ./configure ${HOST_XCOMPILE} \
-                --prefix=$_GNOME_UDIR \
-                --disable-static \
-		CPPFLAGS="${GLIB_CPPFLAGS} ${GTK_CPPFLAGS}"
-            make
-            make install
+        qpushd $_GNOME_UDIR/lib/pkgconfig
+            perl -pi.bak -e"s!^prefix=.*\$!prefix=$_GNOME_UDIR!" *.pc
+            #perl -pi.bak -e's!^Libs: !Libs: -L\${prefix}/bin !' *.pc
         qpopd
-        ${PKG_CONFIG} --exists pixman-1 || die "pixman not installed correctly"
-        rm -rf $TMP_UDIR/pixman-*
-
-        wget_unpacked $LIBXML2_SRC_URL $DOWNLOAD_DIR $TMP_DIR
-        assert_one_dir $TMP_UDIR/libxml2-*
-        qpushd $TMP_UDIR/libxml2-*
-            ./configure ${HOST_XCOMPILE} \
-                --prefix=${_GNOME_UDIR} \
-                --without-threads
-            make
-            make install
-        qpopd
-        rm -rf ${TMP_UDIR}/libxml2-*
 
         quiet gconftool-2 --version &&
         quiet ${PKG_CONFIG} --exists gconf-2.0 libgnome-2.0 libgnomeui-2.0 &&
+        quiet ${PKG_CONFIG} --atleast-version=${GCONF_VERSION} gconf-2.0 &&
+        quiet ${PKG_CONFIG} --atleast-version=${GTK_VERSION} gtk+-2.0 &&
+        quiet ${PKG_CONFIG} --atleast-version=${CAIRO_VERSION} cairo &&
+        quiet ${PKG_CONFIG} --atleast-version=${PIXMAN_VERSION} pixman-1 &&
+        quiet ${PKG_CONFIG} --exact-version=${LIBXML2_VERSION} libxml-2.0 &&
         quiet intltoolize --version || die "gnome not installed correctly"
     fi
     [ ! -d $_GNOME_UDIR/share/aclocal ] || add_to_env "-I $_GNOME_UDIR/share/aclocal" ACLOCAL_FLAGS
@@ -1134,6 +1149,7 @@ function inst_libxslt() {
 	    patch -p0 -u -i ${LIBXSLT_MAKEFILE_PATCH}
             ./configure ${HOST_XCOMPILE} \
                 --prefix=${_LIBXSLT_UDIR} \
+                --with-python=no \
                 --with-libxml-prefix=${_GNOME_UDIR} CPPFLAGS="${GNUTLS_CPPFLAGS}" LDFLAGS="${GNUTLS_LDFLAGS}"
             make
             make install
