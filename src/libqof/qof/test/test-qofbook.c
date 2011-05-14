@@ -523,6 +523,19 @@ test_book_set_data_fin( Fixture *fixture, gconstpointer pData )
     g_assert( g_hash_table_lookup ( fixture->book->data_table_finalizers, (gpointer)key ) == mock_final_cb );
 }
 
+static void
+test_book_mark_closed( Fixture *fixture, gconstpointer pData )
+{
+    g_test_message( "Testing when book is null" );
+    g_assert_cmpstr( &fixture->book->book_open, ==, "y" );
+    qof_book_mark_closed( NULL );
+    g_assert_cmpstr( &fixture->book->book_open, ==, "y" );
+    
+    g_test_message( "Testing when book is not null" );
+    qof_book_mark_closed( fixture->book );
+    g_assert_cmpstr( &fixture->book->book_open, ==, "n" ); 
+}
+
 void
 test_suite_qofbook ( void )
 {
@@ -545,4 +558,5 @@ test_suite_qofbook ( void )
     GNC_TEST_ADD( suitename, "get collection", Fixture, NULL, setup, test_book_get_collection, teardown );
     GNC_TEST_ADD( suitename, "foreach collection", Fixture, NULL, setup, test_book_foreach_collection, teardown );
     GNC_TEST_ADD( suitename, "set data finalizers", Fixture, NULL, setup, test_book_set_data_fin, teardown );
+    GNC_TEST_ADD( suitename, "mark closed", Fixture, NULL, setup, test_book_mark_closed, teardown );
 }
