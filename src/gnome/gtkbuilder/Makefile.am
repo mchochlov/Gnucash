@@ -8,6 +8,7 @@ gtkbuilder_DATA = \
 	fincalc.glade \
 	lots.glade \
 	newuser.glade \
+	owner.glade \
 	price.glade \
 	print.glade \
 	progress.glade \

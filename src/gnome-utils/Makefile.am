@@ -88,10 +88,12 @@ libgncmod_gnome_utils_la_SOURCES = \
   gnc-tree-model-account-types.c \
   gnc-tree-model-account.c \
   gnc-tree-model-budget.c \
+  gnc-tree-model-owner.c \
   gnc-tree-model-commodity.c \
   gnc-tree-model-price.c \
   gnc-tree-view-account.c \
   gnc-tree-view-commodity.c \
+  gnc-tree-view-owner.c \
   gnc-tree-view-price.c \
   gnc-tree-view-sx-list.c \
   gnc-tree-view.c \
@@ -158,10 +160,12 @@ gncinclude_HEADERS = \
   gnc-tree-model-account-types.h \
   gnc-tree-model-account.h \
   gnc-tree-model-budget.h \
+  gnc-tree-model-owner.h \
   gnc-tree-model-commodity.h \
   gnc-tree-model-price.h \
   gnc-tree-view-account.h \
   gnc-tree-view-commodity.h \
+  gnc-tree-view-owner.h \
   gnc-tree-view-price.h \
   gnc-tree-view-sx-list.h \
   gnc-tree-view.h \

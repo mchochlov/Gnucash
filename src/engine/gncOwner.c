@@ -46,7 +46,7 @@
 #define GNC_OWNER_TYPE  "owner-type"
 #define GNC_OWNER_GUID  "owner-guid"
 
-GncOwner * gncOwnerCreate (void)
+GncOwner * gncOwnerNew (void)
 {
     GncOwner *o;
 
@@ -55,10 +55,105 @@ GncOwner * gncOwnerCreate (void)
     return o;
 }
 
-void gncOwnerDestroy (GncOwner *owner)
+void gncOwnerFree (GncOwner *owner)
 {
     if (!owner) return;
     g_free (owner);
+}
+
+void gncOwnerBeginEdit (GncOwner *owner)
+{
+    if (!owner) return;
+    switch (owner->type)
+    {
+    case GNC_OWNER_NONE :
+    case GNC_OWNER_UNDEFINED :
+        break;
+    case GNC_OWNER_CUSTOMER :
+    {
+        gncCustomerBeginEdit(owner->owner.customer);
+        break;
+    }
+    case GNC_OWNER_JOB :
+    {
+        gncJobBeginEdit(owner->owner.job);
+        break;
+    }
+    case GNC_OWNER_VENDOR :
+    {
+        gncVendorBeginEdit(owner->owner.vendor);
+        break;
+    }
+    case GNC_OWNER_EMPLOYEE :
+    {
+        gncEmployeeBeginEdit(owner->owner.employee);
+        break;
+    }
+    }
+}
+
+
+void gncOwnerCommitEdit (GncOwner *owner)
+{
+    if (!owner) return;
+    switch (owner->type)
+    {
+    case GNC_OWNER_NONE :
+    case GNC_OWNER_UNDEFINED :
+        break;
+    case GNC_OWNER_CUSTOMER :
+    {
+        gncCustomerCommitEdit(owner->owner.customer);
+        break;
+    }
+    case GNC_OWNER_JOB :
+    {
+        gncJobCommitEdit(owner->owner.job);
+        break;
+    }
+    case GNC_OWNER_VENDOR :
+    {
+        gncVendorCommitEdit(owner->owner.vendor);
+        break;
+    }
+    case GNC_OWNER_EMPLOYEE :
+    {
+        gncEmployeeCommitEdit(owner->owner.employee);
+        break;
+    }
+    }
+}
+
+
+void gncOwnerDestroy (GncOwner *owner)
+{
+    if (!owner) return;
+    switch (owner->type)
+    {
+    case GNC_OWNER_NONE :
+    case GNC_OWNER_UNDEFINED :
+        break;
+    case GNC_OWNER_CUSTOMER :
+    {
+        gncCustomerDestroy(owner->owner.customer);
+        break;
+    }
+    case GNC_OWNER_JOB :
+    {
+        gncJobDestroy(owner->owner.job);
+        break;
+    }
+    case GNC_OWNER_VENDOR :
+    {
+        gncVendorDestroy(owner->owner.vendor);
+        break;
+    }
+    case GNC_OWNER_EMPLOYEE :
+    {
+        gncEmployeeDestroy(owner->owner.employee);
+        break;
+    }
+    }
 }
 
 void gncOwnerInitUndefined (GncOwner *owner, gpointer obj)
@@ -203,20 +298,25 @@ qofOwnerSetEntity (GncOwner *owner, QofInstance *ent)
         owner->type = GNC_OWNER_CUSTOMER;
         gncOwnerInitCustomer(owner, (GncCustomer*)ent);
     }
-    if (0 == safe_strcmp(ent->e_type, GNC_ID_JOB))
+    else if (0 == safe_strcmp(ent->e_type, GNC_ID_JOB))
     {
         owner->type = GNC_OWNER_JOB;
         gncOwnerInitJob(owner, (GncJob*)ent);
     }
-    if (0 == safe_strcmp(ent->e_type, GNC_ID_VENDOR))
+    else if (0 == safe_strcmp(ent->e_type, GNC_ID_VENDOR))
     {
         owner->type = GNC_OWNER_VENDOR;
         gncOwnerInitVendor(owner, (GncVendor*)ent);
     }
-    if (0 == safe_strcmp(ent->e_type, GNC_ID_EMPLOYEE))
+    else if (0 == safe_strcmp(ent->e_type, GNC_ID_EMPLOYEE))
     {
         owner->type = GNC_OWNER_EMPLOYEE;
         gncOwnerInitEmployee(owner, (GncEmployee*)ent);
+    }
+    else
+    {
+        owner->type = GNC_OWNER_NONE;
+        owner->owner.undefined=NULL;
     }
 }
 
@@ -297,6 +397,14 @@ gboolean gncOwnerEqual (const GncOwner *a, const GncOwner *b)
     if (!a || !b) return FALSE;
     if (gncOwnerGetType (a) != gncOwnerGetType (b)) return FALSE;
     return (a->owner.undefined == b->owner.undefined);
+}
+
+int gncOwnerGCompareFunc (const GncOwner *a, const GncOwner *b)
+{
+    if (gncOwnerEqual (a, b))
+        return 0;
+    else
+        return 1;
 }
 
 const char * gncOwnerGetID (const GncOwner *owner)
@@ -393,9 +501,8 @@ gboolean gncOwnerGetActive (const GncOwner *owner)
         return gncVendorGetActive (owner->owner.vendor);
     case GNC_OWNER_EMPLOYEE:
         return gncEmployeeGetActive (owner->owner.employee);
-    /* Jobs don't really have an active status, so we consider them always active */
     case GNC_OWNER_JOB:
-        return TRUE;
+        return gncJobGetActive (owner->owner.job);
     }
 }
 
@@ -417,6 +524,56 @@ const GncGUID * gncOwnerGetGUID (const GncOwner *owner)
         return qof_instance_get_guid (QOF_INSTANCE(owner->owner.vendor));
     case GNC_OWNER_EMPLOYEE:
         return qof_instance_get_guid (QOF_INSTANCE(owner->owner.employee));
+    }
+}
+
+void
+gncOwnerSetName (const GncOwner *owner, const gchar *name)
+{
+    if (!owner) return;
+    switch (owner->type)
+    {
+    case GNC_OWNER_CUSTOMER:
+        gncCustomerSetName (owner->owner.customer, name);
+        break;
+    case GNC_OWNER_VENDOR:
+        gncVendorSetName (owner->owner.vendor, name);
+        break;
+    case GNC_OWNER_EMPLOYEE:
+        gncAddressSetName (gncEmployeeGetAddr (owner->owner.employee), name);
+        break;
+    case GNC_OWNER_JOB:
+        gncJobSetName (owner->owner.job, name);
+        break;
+    case GNC_OWNER_NONE:
+    case GNC_OWNER_UNDEFINED:
+    default:
+        break;
+    }
+}
+
+void
+gncOwnerSetActive (const GncOwner *owner, gboolean active)
+{
+    if (!owner) return;
+    switch (owner->type)
+    {
+    case GNC_OWNER_CUSTOMER:
+        gncCustomerSetActive (owner->owner.customer, active);
+        break;
+    case GNC_OWNER_VENDOR:
+        gncVendorSetActive (owner->owner.vendor, active);
+        break;
+    case GNC_OWNER_EMPLOYEE:
+        gncEmployeeSetActive (owner->owner.employee, active);
+        break;
+    case GNC_OWNER_JOB:
+        gncJobSetActive (owner->owner.job, active);
+        break;
+    case GNC_OWNER_NONE:
+    case GNC_OWNER_UNDEFINED:
+    default:
+        break;
     }
 }
 

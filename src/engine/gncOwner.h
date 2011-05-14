@@ -114,16 +114,37 @@ GncCustomer * gncOwnerGetCustomer (const GncOwner *owner);
 GncJob * gncOwnerGetJob (const GncOwner *owner);
 GncVendor * gncOwnerGetVendor (const GncOwner *owner);
 GncEmployee * gncOwnerGetEmployee (const GncOwner *owner);
-/** @} */
-void gncOwnerCopy (const GncOwner *src, GncOwner *dest);
-gboolean gncOwnerEqual (const GncOwner *a, const GncOwner *b);
-int gncOwnerCompare (const GncOwner *a, const GncOwner *b);
 
 const char * gncOwnerGetID (const GncOwner *owner);
 const char * gncOwnerGetName (const GncOwner *owner);
 GncAddress * gncOwnerGetAddr (const GncOwner *owner);
 gboolean gncOwnerGetActive (const GncOwner *owner);
 gnc_commodity * gncOwnerGetCurrency (const GncOwner *owner);
+/** @} */
+
+/** \name Set routines.
+@{
+*/
+void gncOwnerSetName (const GncOwner *owner, const gchar *new_name);
+void gncOwnerSetActive (const GncOwner *owner, gboolean active);
+/** @} */
+
+void gncOwnerCopy (const GncOwner *src, GncOwner *dest);
+
+/** \name Comparison routines.
+ @{
+ */
+/** Assess equality by checking
+ *  - if both owner objects refer to the same owner type
+ *  - and if the owner reference points to the same
+ *    {vendor/customer/employee} in memory */
+gboolean gncOwnerEqual (const GncOwner *a, const GncOwner *b);
+/** Same as gncOwnerEqual, but returns 0 if
+    equal to be used as a GList custom compare function */
+int gncOwnerGCompareFunc (const GncOwner *a, const GncOwner *b);
+/** Sort on name */
+int gncOwnerCompare (const GncOwner *a, const GncOwner *b);
+/** @} */
 
 /** Get the GncGUID of the immediate owner */
 const GncGUID * gncOwnerGetGUID (const GncOwner *owner);
@@ -168,7 +189,17 @@ KvpFrame* gncOwnerGetSlots(GncOwner* owner);
  * Normal C code has no need to ever use these two functions, and rather
  * can just use a GncOwner directly and just pass around a pointer to it.
  */
-GncOwner * gncOwnerCreate (void);
+GncOwner * gncOwnerNew (void);
+void gncOwnerFree (GncOwner *owner);
+
+
+/**
+ * These are convenience wrappers around gnc{Vender,Customer,Job,Employee}*
+ * functions. This allows you to begin edit, destroy commit edit an owner
+ * without knowing its type.
+ */
+void gncOwnerBeginEdit (GncOwner *owner);
+void gncOwnerCommitEdit (GncOwner *owner);
 void gncOwnerDestroy (GncOwner *owner);
 
 #endif /* GNC_OWNER_H_ */
