@@ -66,6 +66,12 @@ mock_collection_set_dirty (QofCollection *col, gpointer dummy)
     qof_collection_mark_dirty( col );
 }
 
+/* mock final callback function */
+static void
+mock_final_cb (QofBook *book, gpointer key, gpointer user_data)
+{
+}
+
 static void
 test_book_readonly( Fixture *fixture, gconstpointer pData )
 {
@@ -490,6 +496,33 @@ test_book_foreach_collection( Fixture *fixture, gconstpointer pData )
     g_assert( qof_collection_is_dirty( m_col2 ) );
 }
 
+static void
+test_book_set_data_fin( Fixture *fixture, gconstpointer pData )
+{
+    const char *key = "key";
+    const char *data = "data";
+    
+    g_test_message( "Testing when book is null" );
+    qof_book_set_data_fin( NULL, key, (gpointer) data, mock_final_cb );
+    g_assert( qof_book_get_data( NULL, key ) == NULL );
+    g_assert( g_hash_table_lookup ( fixture->book->data_table_finalizers, (gpointer)key ) != mock_final_cb );
+    
+    g_test_message( "Testing when key is null" );
+    qof_book_set_data_fin( fixture->book, NULL, (gpointer) data, mock_final_cb );
+    g_assert( qof_book_get_data( fixture->book, NULL) == NULL );
+    g_assert( g_hash_table_lookup ( fixture->book->data_table_finalizers, (gpointer)key ) != mock_final_cb );
+    
+    g_test_message( "Testing with book key not null, cb null" );
+    qof_book_set_data_fin( fixture->book, key, (gpointer) data, NULL );
+    g_assert_cmpstr( (const char *)qof_book_get_data( fixture->book, key ), ==, data );
+    g_assert( g_hash_table_lookup ( fixture->book->data_table_finalizers, (gpointer)key ) != mock_final_cb );
+    
+    g_test_message( "Testing with all data set" );
+    qof_book_set_data_fin( fixture->book, key, (gpointer) data, mock_final_cb );
+    g_assert_cmpstr( (const char *)qof_book_get_data( fixture->book, key ), ==, data );
+    g_assert( g_hash_table_lookup ( fixture->book->data_table_finalizers, (gpointer)key ) == mock_final_cb );
+}
+
 void
 test_suite_qofbook ( void )
 {
@@ -511,4 +544,5 @@ test_suite_qofbook ( void )
     GNC_TEST_ADD( suitename, "set get data", Fixture, NULL, setup, test_book_set_get_data, teardown );
     GNC_TEST_ADD( suitename, "get collection", Fixture, NULL, setup, test_book_get_collection, teardown );
     GNC_TEST_ADD( suitename, "foreach collection", Fixture, NULL, setup, test_book_foreach_collection, teardown );
+    GNC_TEST_ADD( suitename, "set data finalizers", Fixture, NULL, setup, test_book_set_data_fin, teardown );
 }
