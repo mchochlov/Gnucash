@@ -426,6 +426,30 @@ test_book_set_get_data( Fixture *fixture, gconstpointer pData )
     g_assert_cmpstr( (const char *)qof_book_get_data( fixture->book, key ), ==, data );
 }
 
+static void
+test_book_get_collection( Fixture *fixture, gconstpointer pData )
+{
+    QofIdType my_type = "my type";
+    QofCollection *m_col, *m_col2;
+    
+    g_test_message( "Testing when book is null" );
+    g_assert( qof_book_get_collection( NULL, my_type ) == NULL );
+    
+    g_test_message( "Testing when entity type is null" );
+    g_assert( qof_book_get_collection( fixture->book, NULL ) == NULL );
+    
+    g_test_message( "Testing when collection does not exist" );
+    g_assert( g_hash_table_lookup ( fixture->book->hash_of_collections, my_type ) == NULL );
+    m_col = qof_book_get_collection( fixture->book, my_type );
+    g_assert( m_col != NULL );
+    
+    g_test_message( "Testing with existing collection" );
+    g_assert( g_hash_table_lookup ( fixture->book->hash_of_collections, my_type ) != NULL );
+    m_col2 = qof_book_get_collection( fixture->book, my_type );
+    g_assert( m_col2 != NULL );
+    g_assert( m_col == m_col2 );
+}
+
 void
 test_suite_qofbook ( void )
 {
@@ -445,4 +469,5 @@ test_suite_qofbook ( void )
     GNC_TEST_ADD( suitename, "set dirty callback", Fixture, NULL, setup, test_book_set_dirty_cb, teardown );
     GNC_TEST_ADD( suitename, "shutting down", Fixture, NULL, setup, test_book_shutting_down, teardown );
     GNC_TEST_ADD( suitename, "set get data", Fixture, NULL, setup, test_book_set_get_data, teardown );
+    GNC_TEST_ADD( suitename, "get collection", Fixture, NULL, setup, test_book_get_collection, teardown );
 }
