@@ -403,6 +403,29 @@ test_book_shutting_down( Fixture *fixture, gconstpointer pData )
     g_assert( qof_book_shutting_down( fixture->book ) == FALSE );
 }
 
+static void
+test_book_set_get_data( Fixture *fixture, gconstpointer pData )
+{
+    const char *key = "key";
+    const char *data = "data";
+    
+    g_test_message( "Testing when book is null" );
+    qof_book_set_data( NULL, key, (gpointer) data );
+    g_assert( qof_book_get_data( NULL, key ) == NULL );
+    
+    g_test_message( "Testing when key is null" );
+    qof_book_set_data( fixture->book, NULL, (gpointer) data );
+    g_assert( qof_book_get_data( fixture->book, NULL) == NULL );
+    
+    g_test_message( "Testing with book key not null, data null" );
+    qof_book_set_data( fixture->book, key, NULL );
+    g_assert( qof_book_get_data( fixture->book, key ) == NULL );
+    
+    g_test_message( "Testing with book key data not null" );
+    qof_book_set_data( fixture->book, key, (gpointer) data );
+    g_assert_cmpstr( (const char *)qof_book_get_data( fixture->book, key ), ==, data );
+}
+
 void
 test_suite_qofbook ( void )
 {
@@ -421,4 +444,5 @@ test_suite_qofbook ( void )
     GNC_TEST_ADD( suitename, "dirty time", Fixture, NULL, setup, test_book_get_dirty_time, teardown );
     GNC_TEST_ADD( suitename, "set dirty callback", Fixture, NULL, setup, test_book_set_dirty_cb, teardown );
     GNC_TEST_ADD( suitename, "shutting down", Fixture, NULL, setup, test_book_shutting_down, teardown );
+    GNC_TEST_ADD( suitename, "set get data", Fixture, NULL, setup, test_book_set_get_data, teardown );
 }
