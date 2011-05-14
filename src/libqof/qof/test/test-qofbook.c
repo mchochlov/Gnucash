@@ -59,6 +59,13 @@ mock_dirty_cb (QofBook *book, gboolean dirty, gpointer user_data)
 {
 }
 
+/* mock callback for qof_book_foreach_collection testing */
+static void
+mock_collection_set_dirty (QofCollection *col, gpointer dummy)
+{
+    qof_collection_mark_dirty( col );
+}
+
 static void
 test_book_readonly( Fixture *fixture, gconstpointer pData )
 {
@@ -450,6 +457,39 @@ test_book_get_collection( Fixture *fixture, gconstpointer pData )
     g_assert( m_col == m_col2 );
 }
 
+static void
+test_book_foreach_collection( Fixture *fixture, gconstpointer pData )
+{
+    QofCollection *m_col, *m_col2;
+    QofIdType my_type = "my type", my_type2 = "my type2";
+    
+    /* need this as long as we have fatal warnings enabled */
+    g_test_log_set_fatal_handler ( ( GTestLogFatalFunc )handle_faults, NULL );
+    
+    g_test_message( "Testing when book is null" );
+    /* set collections test they are not dirty */
+    m_col = qof_book_get_collection( fixture->book, my_type );
+    m_col2 = qof_book_get_collection( fixture->book, my_type2 );
+    g_assert( !qof_collection_is_dirty( m_col ) );
+    g_assert( !qof_collection_is_dirty( m_col2 ) );
+    /* launch foreach make sure they are still dirty */
+    qof_book_foreach_collection( NULL, mock_collection_set_dirty, NULL );
+    g_assert( !qof_collection_is_dirty( m_col ) );
+    g_assert( !qof_collection_is_dirty( m_col2 ) );
+    
+    g_test_message( "Testing when cb is null" );
+    /* launch foreach make sure they are still dirty */
+    qof_book_foreach_collection( fixture->book, NULL, NULL );
+    g_assert( !qof_collection_is_dirty( m_col ) );
+    g_assert( !qof_collection_is_dirty( m_col2 ) );
+    
+    g_test_message( "Testing when cb is null" );
+    /* launch foreach make sure they are still dirty */
+    qof_book_foreach_collection( fixture->book, mock_collection_set_dirty, NULL );
+    g_assert( qof_collection_is_dirty( m_col ) );
+    g_assert( qof_collection_is_dirty( m_col2 ) );
+}
+
 void
 test_suite_qofbook ( void )
 {
@@ -470,4 +510,5 @@ test_suite_qofbook ( void )
     GNC_TEST_ADD( suitename, "shutting down", Fixture, NULL, setup, test_book_shutting_down, teardown );
     GNC_TEST_ADD( suitename, "set get data", Fixture, NULL, setup, test_book_set_get_data, teardown );
     GNC_TEST_ADD( suitename, "get collection", Fixture, NULL, setup, test_book_get_collection, teardown );
+    GNC_TEST_ADD( suitename, "foreach collection", Fixture, NULL, setup, test_book_foreach_collection, teardown );
 }
