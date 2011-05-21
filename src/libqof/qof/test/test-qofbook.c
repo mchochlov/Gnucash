@@ -398,15 +398,19 @@ test_book_mark_dirty( Fixture *fixture, gconstpointer pData )
 static void
 test_book_get_dirty_time( Fixture *fixture, gconstpointer pData )
 {
-    time_t temp_time;
+    time_t before, after;
     
     g_test_message( "Testing time on saved book = 0" );
     g_assert( qof_book_not_saved( fixture->book ) == FALSE );
     g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), ==, 0);
     
-    g_test_message( "Testing time on dirty book > 0" );
+    g_test_message( "Testing time on dirty book is correct" );
+    before = time( NULL );
     qof_book_mark_dirty( fixture->book );
-    g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), >, 0);
+    after = time( NULL );
+    g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), >=, before);
+    g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), <=, after);
+    
 }
 
 static void
