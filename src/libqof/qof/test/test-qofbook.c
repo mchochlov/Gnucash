@@ -214,6 +214,8 @@ static void
 test_book_get_counter( Fixture *fixture, gconstpointer pData )
 {
     const char *counter_name = "Counter name";
+    const char *err_no_book = "No book";
+    const char *err_invalid_cnt = "Invalid counter name";
     gint64 counter;
     
     /* need this as long as we have fatal warnings enabled */
@@ -221,12 +223,18 @@ test_book_get_counter( Fixture *fixture, gconstpointer pData )
     
     counter = qof_book_get_counter( NULL, counter_name );
     g_assert_cmpint( counter, ==, -1 );
+    g_assert( g_strrstr( test_struct.msg, err_no_book ) != NULL );
+    g_free( test_struct.msg );
     
     counter = qof_book_get_counter( fixture->book, NULL );
     g_assert_cmpint( counter, ==, -1 );
+    g_assert( g_strrstr( test_struct.msg, err_invalid_cnt ) != NULL );
+    g_free( test_struct.msg );
     
     counter = qof_book_get_counter( fixture->book, '\0' );
     g_assert_cmpint( counter, ==, -1 );
+    g_assert( g_strrstr( test_struct.msg, err_invalid_cnt ) != NULL );
+    g_free( test_struct.msg );
     
     counter = qof_book_get_counter( fixture->book, counter_name );
     g_assert_cmpint( counter, ==, 0 );
@@ -241,6 +249,8 @@ test_book_get_counter_format ( Fixture *fixture, gconstpointer pData )
 {
     const char *counter_name = "Counter name";
     const char *counter_name_not_set = "Counter name not set";
+    const char *err_no_book = "No book";
+    const char *err_invalid_cnt = "Invalid counter name";
     gchar *r;
     gint64 counter;
     
@@ -250,14 +260,20 @@ test_book_get_counter_format ( Fixture *fixture, gconstpointer pData )
     g_test_message( "Testing counter format when book is null" );
     r = qof_book_get_counter_format( NULL, counter_name );
     g_assert_cmpstr( r, ==, NULL );
+    g_assert( g_strrstr( test_struct.msg, err_no_book ) != NULL );
+    g_free( test_struct.msg );    
     
     g_test_message( "Testing counter format when counter name is null" );
     r = qof_book_get_counter_format( fixture->book, NULL );
     g_assert_cmpstr( r, ==, NULL );
+    g_assert( g_strrstr( test_struct.msg, err_invalid_cnt ) != NULL );
+    g_free( test_struct.msg );
     
     g_test_message( "Testing counter format when counter name is empty string" );
     r = qof_book_get_counter_format( fixture->book, '\0' );
     g_assert_cmpstr( r, ==, NULL );
+    g_assert( g_strrstr( test_struct.msg, err_invalid_cnt ) != NULL );
+    g_free( test_struct.msg );
     
     g_test_message( "Testing counter format with existing counter" );
     counter = qof_book_get_counter( fixture->book, counter_name );
@@ -273,6 +289,8 @@ static void
 test_book_increment_and_format_counter ( Fixture *fixture, gconstpointer pData )
 {
     const char *counter_name = "Counter name";
+    const char *err_no_book = "No book";
+    const char *err_invalid_cnt = "Invalid counter name";
     gchar *format;
     gchar *r;
     gint64 counter;
@@ -284,16 +302,22 @@ test_book_increment_and_format_counter ( Fixture *fixture, gconstpointer pData )
     r = qof_book_increment_and_format_counter( NULL, counter_name );
     g_assert_cmpstr( r, ==, NULL );
     g_free( r );
+    g_assert( g_strrstr( test_struct.msg, err_no_book ) != NULL );
+    g_free( test_struct.msg );
     
     g_test_message( "Testing increment and format when counter name is null" );
     r = qof_book_increment_and_format_counter( fixture->book, NULL );
     g_assert_cmpstr( r, ==, NULL );
     g_free( r );
+    g_assert( g_strrstr( test_struct.msg, err_invalid_cnt ) != NULL );
+    g_free( test_struct.msg );
     
     g_test_message( "Testing increment and format when counter name is empty string" );
     r = qof_book_increment_and_format_counter( fixture->book, '\0' );
     g_assert_cmpstr( r, ==, NULL );
     g_free( r );
+    g_assert( g_strrstr( test_struct.msg, err_invalid_cnt ) != NULL );
+    g_free( test_struct.msg );
     
     g_test_message( "Testing increment and format with new counter" );
     r = qof_book_increment_and_format_counter( fixture->book, counter_name );
@@ -432,7 +456,6 @@ test_book_set_dirty_cb( Fixture *fixture, gconstpointer pData )
     
     g_test_message( "Testing when callback was previously set" );
     g_assert( fixture->book->dirty_cb != NULL );
-    g_assert( test_struct.msg == NULL);
     qof_book_set_dirty_cb( fixture->book, NULL, NULL );
     g_assert( g_strrstr( test_struct.msg, error_msg ) != NULL );
     g_assert( fixture->book->dirty_cb == NULL );
@@ -582,9 +605,9 @@ test_suite_qofbook ( void )
     GNC_TEST_ADD( suitename, "set string option", Fixture, NULL, setup, test_book_set_string_option, teardown );
     GNC_TEST_ADD( suitename, "not saved", Fixture, NULL, setup, test_book_not_saved, teardown );
     GNC_TEST_ADD( suitename, "mark saved", Fixture, NULL, setup, test_book_mark_saved, teardown );
-    //GNC_TEST_ADD( suitename, "get counter", Fixture, NULL, setup, test_book_get_counter, teardown );
-    //GNC_TEST_ADD( suitename, "get counter format", Fixture, NULL, setup, test_book_get_counter_format, teardown );
-    //GNC_TEST_ADD( suitename, "increment and format counter", Fixture, NULL, setup, test_book_increment_and_format_counter, teardown );
+    GNC_TEST_ADD( suitename, "get counter", Fixture, NULL, setup, test_book_get_counter, teardown );
+    GNC_TEST_ADD( suitename, "get counter format", Fixture, NULL, setup, test_book_get_counter_format, teardown );
+    GNC_TEST_ADD( suitename, "increment and format counter", Fixture, NULL, setup, test_book_increment_and_format_counter, teardown );
     GNC_TEST_ADD( suitename, "kvp changed", Fixture, NULL, setup, test_book_kvp_changed, teardown );
     GNC_TEST_ADD( suitename, "use trading accounts", Fixture, NULL, setup, test_book_use_trading_accounts, teardown );
     GNC_TEST_ADD( suitename, "mark dirty", Fixture, NULL, setup, test_book_mark_dirty, teardown );
