@@ -625,7 +625,7 @@ void qofEntrySetInvDiscType (GncEntry *entry, const char *type_string)
 
 void qofEntrySetInvDiscHow  (GncEntry *entry, const char *type)
 {
-    GncDiscountHow how;
+    GncDiscountHow how = GNC_DISC_PRETAX;
 
     if (!entry) return;
     gncEntryBeginEdit (entry);
@@ -1603,8 +1603,8 @@ gboolean gncEntryRegister (void)
             (QofSetterFunc)gncEntrySetInvTaxIncluded
         },
         {
-            ENTRY_BILL_TAXABLE, QOF_TYPE_BOOLEAN, (QofAccessFunc)gncEntryGetInvTaxable,
-            (QofSetterFunc)gncEntrySetInvTaxable
+            ENTRY_BILL_TAXABLE, QOF_TYPE_BOOLEAN, (QofAccessFunc)gncEntryGetBillTaxable,
+            (QofSetterFunc)gncEntrySetBillTaxable
         },
         {
             ENTRY_BILL_TAX_INC, QOF_TYPE_BOOLEAN, (QofAccessFunc)gncEntryGetBillTaxIncluded,
