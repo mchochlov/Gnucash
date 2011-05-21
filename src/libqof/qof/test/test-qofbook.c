@@ -35,6 +35,13 @@ typedef struct
     QofBook *book;
 } Fixture;
 
+static struct
+{
+    guint param;
+    gpointer data;
+    gboolean called;
+} test_struct;
+
 static void
 setup( Fixture *fixture, gconstpointer pData )
 {
@@ -57,6 +64,13 @@ handle_faults ( const char * log_domain, GLogLevelFlags log_level, const gchar *
 static void
 mock_dirty_cb (QofBook *book, gboolean dirty, gpointer user_data)
 {
+    test_struct.called = TRUE;
+    g_test_message( "Checking if book is valid" );
+    g_assert( book );
+    g_assert( QOF_IS_BOOK( book ) );
+    g_test_message( "Checking parameters" );
+    g_assert( dirty );
+    g_assert( user_data == test_struct.data );
 }
 
 /* mock callback for qof_book_foreach_collection testing */
@@ -336,6 +350,7 @@ test_book_mark_dirty( Fixture *fixture, gconstpointer pData )
 {
     QofBook *_empty = NULL;
     time_t before, after;
+    guint param = (guint) g_test_rand_int();
   
     g_test_message( "Testing when book is NULL" );
     qof_book_mark_dirty( _empty );
@@ -345,21 +360,31 @@ test_book_mark_dirty( Fixture *fixture, gconstpointer pData )
     g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), ==, 0);
     g_assert( fixture->book->dirty_cb == NULL );
     g_assert( qof_book_not_saved( fixture->book ) == FALSE );
+    before = time( NULL );
     qof_book_mark_dirty( fixture->book );
-    g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), !=, 0);
-    g_assert( fixture->book->dirty_cb == NULL );
+    after = time( NULL );
+    g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), >=, before);
+    g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), <=, after);
     g_assert( qof_book_not_saved( fixture->book ) == TRUE );
     
     g_test_message( "Testing when book is not dirty and dirty_cb is not null" );
+    /* prepare conditions */
     qof_book_mark_saved( fixture->book );
-    qof_book_set_dirty_cb( fixture->book, mock_dirty_cb, NULL );
+    qof_book_set_dirty_cb( fixture->book, mock_dirty_cb, (gpointer) (&param) );
+    test_struct.data = (gpointer) (&param);
+    test_struct.called = FALSE;
     g_assert( fixture->book->dirty_cb != NULL );
     g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), ==, 0);
     g_assert( qof_book_not_saved( fixture->book ) == FALSE );
+    /* run FUT */
+    before = time( NULL );
     qof_book_mark_dirty( fixture->book );
-    g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), !=, 0);
-    g_assert( fixture->book->dirty_cb != NULL );
+    after = time( NULL );
+    /* test output */
+    g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), >=, before);
+    g_assert_cmpint( qof_book_get_dirty_time( fixture->book ), <=, after);
     g_assert( qof_book_not_saved( fixture->book ) == TRUE );
+    g_assert( test_struct.called );
     
     g_test_message( "Testing when book is dirty" );
     g_assert( qof_book_not_saved( fixture->book ) == TRUE );
