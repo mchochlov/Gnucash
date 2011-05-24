@@ -482,6 +482,7 @@ test_book_set_get_data( Fixture *fixture, gconstpointer pData )
     const char *key = "key";
     const char *data = "data";
     
+    g_assert( fixture->book->data_tables != NULL );
     g_test_message( "Testing when book is null" );
     qof_book_set_data( NULL, key, (gpointer) data );
     g_assert( qof_book_get_data( NULL, key ) == NULL );
@@ -512,6 +513,7 @@ test_book_get_collection( Fixture *fixture, gconstpointer pData )
     g_assert( qof_book_get_collection( fixture->book, NULL ) == NULL );
     
     g_test_message( "Testing when collection does not exist" );
+    g_assert( fixture->book->hash_of_collections != NULL );
     g_assert( g_hash_table_lookup ( fixture->book->hash_of_collections, my_type ) == NULL );
     m_col = qof_book_get_collection( fixture->book, my_type );
     g_assert( m_col != NULL );
