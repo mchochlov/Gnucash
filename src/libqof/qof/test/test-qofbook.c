@@ -100,6 +100,12 @@ mock_foreach_collection (QofCollection *col, gpointer user_data)
 static void
 mock_final_cb (QofBook *book, gpointer key, gpointer user_data)
 {
+    test_struct.called = TRUE;
+    g_assert( book );
+    g_assert( QOF_IS_BOOK( book ) );
+    g_test_message( "Checking parameters" );
+    g_assert_cmpstr( (gchar*)key, ==, "key" );
+    g_assert_cmpstr( (gchar*)user_data, ==, "data" );
 }
 
 static void
@@ -577,30 +583,48 @@ test_book_foreach_collection( Fixture *fixture, gconstpointer pData )
 }
 
 static void
-test_book_set_data_fin( Fixture *fixture, gconstpointer pData )
+test_book_set_data_fin( void )
 {
+    QofBook *book;
     const char *key = "key";
     const char *data = "data";
     
+    /* init */
+    book = qof_book_new();
+    g_assert_cmpint( g_hash_table_size( book->data_tables ), ==, 0 );
+    g_assert_cmpint( g_hash_table_size( book->data_table_finalizers ), ==, 0 );
+    
     g_test_message( "Testing when book is null" );
     qof_book_set_data_fin( NULL, key, (gpointer) data, mock_final_cb );
-    g_assert( qof_book_get_data( NULL, key ) == NULL );
-    g_assert( g_hash_table_lookup ( fixture->book->data_table_finalizers, (gpointer)key ) != mock_final_cb );
+    /* assert nothing was set */
+    g_assert_cmpint( g_hash_table_size( book->data_tables ), ==, 0 );
+    g_assert_cmpint( g_hash_table_size( book->data_table_finalizers ), ==, 0 );
     
     g_test_message( "Testing when key is null" );
-    qof_book_set_data_fin( fixture->book, NULL, (gpointer) data, mock_final_cb );
-    g_assert( qof_book_get_data( fixture->book, NULL) == NULL );
-    g_assert( g_hash_table_lookup ( fixture->book->data_table_finalizers, (gpointer)key ) != mock_final_cb );
+    qof_book_set_data_fin( book, NULL, (gpointer) data, mock_final_cb );
+    /* nothing set as well */
+    g_assert_cmpint( g_hash_table_size( book->data_tables ), ==, 0 );
+    g_assert_cmpint( g_hash_table_size( book->data_table_finalizers ), ==, 0 );
     
     g_test_message( "Testing with book key not null, cb null" );
-    qof_book_set_data_fin( fixture->book, key, (gpointer) data, NULL );
-    g_assert_cmpstr( (const char *)qof_book_get_data( fixture->book, key ), ==, data );
-    g_assert( g_hash_table_lookup ( fixture->book->data_table_finalizers, (gpointer)key ) != mock_final_cb );
+    qof_book_set_data_fin( book, key, (gpointer) data, NULL );
+    /* now data is set cb not set */
+    g_assert_cmpint( g_hash_table_size( book->data_tables ), ==, 1 );
+    g_assert_cmpint( g_hash_table_size( book->data_table_finalizers ), ==, 0 );
+    g_assert_cmpstr( (const char *)qof_book_get_data( book, key ), ==, data );
     
     g_test_message( "Testing with all data set" );
-    qof_book_set_data_fin( fixture->book, key, (gpointer) data, mock_final_cb );
-    g_assert_cmpstr( (const char *)qof_book_get_data( fixture->book, key ), ==, data );
-    g_assert( g_hash_table_lookup ( fixture->book->data_table_finalizers, (gpointer)key ) == mock_final_cb );
+    qof_book_set_data_fin( book, key, (gpointer) data, mock_final_cb );
+    /* now we have all set */
+    g_assert_cmpint( g_hash_table_size( book->data_tables ), ==, 1 );
+    g_assert_cmpint( g_hash_table_size( book->data_table_finalizers ), ==, 1 );
+    g_assert_cmpstr( (const char *)qof_book_get_data( book, key ), ==, data );
+    g_assert( g_hash_table_lookup ( book->data_table_finalizers, (gpointer)key ) == mock_final_cb );
+    
+    /* get rid of book make sure final cb is called */
+    test_struct.called = FALSE;
+    qof_book_destroy( book );
+    g_assert( test_struct.called );
 }
 
 static void
@@ -637,6 +661,6 @@ test_suite_qofbook ( void )
     GNC_TEST_ADD( suitename, "set get data", Fixture, NULL, setup, test_book_set_get_data, teardown );
     GNC_TEST_ADD( suitename, "get collection", Fixture, NULL, setup, test_book_get_collection, teardown );
     GNC_TEST_ADD( suitename, "foreach collection", Fixture, NULL, setup, test_book_foreach_collection, teardown );
-    GNC_TEST_ADD( suitename, "set data finalizers", Fixture, NULL, setup, test_book_set_data_fin, teardown );
+    GNC_TEST_ADD_FUNC( suitename, "set data finalizers", test_book_set_data_fin );
     GNC_TEST_ADD( suitename, "mark closed", Fixture, NULL, setup, test_book_mark_closed, teardown );
 }
