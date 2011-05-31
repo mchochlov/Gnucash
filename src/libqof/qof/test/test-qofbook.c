@@ -43,6 +43,13 @@ static struct
     gchar* msg;
 } test_struct;
 
+static struct
+{
+    gboolean col1_called;
+    gboolean col2_called;
+    gpointer data;
+} col_struct;
+
 static void
 setup( Fixture *fixture, gconstpointer pData )
 {
@@ -78,9 +85,15 @@ mock_dirty_cb (QofBook *book, gboolean dirty, gpointer user_data)
 
 /* mock callback for qof_book_foreach_collection testing */
 static void
-mock_collection_set_dirty (QofCollection *col, gpointer dummy)
+mock_foreach_collection (QofCollection *col, gpointer user_data)
 {
-    qof_collection_mark_dirty( col );
+    g_test_message( "Checking if collection and data passed correctly" );
+    g_assert( col );
+    g_assert( user_data == col_struct.data );
+    if ( g_strcmp0( qof_collection_get_type(col), "my_type" ) == 0 )
+	col_struct.col1_called = TRUE;
+    else if ( g_strcmp0( qof_collection_get_type(col), "my_type2" ) == 0 )
+	col_struct.col2_called = TRUE;
 }
 
 /* mock final callback function */
@@ -529,33 +542,38 @@ static void
 test_book_foreach_collection( Fixture *fixture, gconstpointer pData )
 {
     QofCollection *m_col, *m_col2;
-    QofIdType my_type = "my type", my_type2 = "my type2";
+    QofIdType my_type = "my_type", my_type2 = "my_type2";
+    guint param = (guint) g_test_rand_int();
     
     /* need this as long as we have fatal warnings enabled */
     g_test_log_set_fatal_handler ( ( GTestLogFatalFunc )handle_faults, NULL );
     
     g_test_message( "Testing when book is null" );
-    /* set collections test they are not dirty */
     m_col = qof_book_get_collection( fixture->book, my_type );
     m_col2 = qof_book_get_collection( fixture->book, my_type2 );
-    g_assert( !qof_collection_is_dirty( m_col ) );
-    g_assert( !qof_collection_is_dirty( m_col2 ) );
-    /* launch foreach make sure they are still dirty */
-    qof_book_foreach_collection( NULL, mock_collection_set_dirty, NULL );
-    g_assert( !qof_collection_is_dirty( m_col ) );
-    g_assert( !qof_collection_is_dirty( m_col2 ) );
+    col_struct.col1_called = FALSE;
+    col_struct.col2_called = FALSE;
+    col_struct.data = (gpointer) (&param);
+    /* launch foreach make sure callback was not called and check warning msg */
+    qof_book_foreach_collection( NULL, mock_foreach_collection, (gpointer)(&param) );
+    g_assert( !col_struct.col1_called );
+    g_assert( !col_struct.col2_called );
+    g_assert_cmpstr( test_struct.msg, ==, "qof_book_foreach_collection: assertion `book' failed" );
+    g_free( test_struct.msg );
     
     g_test_message( "Testing when cb is null" );
-    /* launch foreach make sure they are still dirty */
-    qof_book_foreach_collection( fixture->book, NULL, NULL );
-    g_assert( !qof_collection_is_dirty( m_col ) );
-    g_assert( !qof_collection_is_dirty( m_col2 ) );
+    /* launching with empty cb should still fail and produce warning */
+    qof_book_foreach_collection( fixture->book, NULL, (gpointer)(&param) );
+    g_assert( !col_struct.col1_called );
+    g_assert( !col_struct.col2_called );
+    g_assert_cmpstr( test_struct.msg, ==, "qof_book_foreach_collection: assertion `cb' failed" );
+    g_free( test_struct.msg );
     
-    g_test_message( "Testing when cb is null" );
-    /* launch foreach make sure they are still dirty */
-    qof_book_foreach_collection( fixture->book, mock_collection_set_dirty, NULL );
-    g_assert( qof_collection_is_dirty( m_col ) );
-    g_assert( qof_collection_is_dirty( m_col2 ) );
+    g_test_message( "Testing when book and cb not null, user_data provided" );
+    /* both cols have to be called */
+    qof_book_foreach_collection( fixture->book, mock_foreach_collection, (gpointer)(&param) );
+    g_assert( col_struct.col1_called );
+    g_assert( col_struct.col2_called );
 }
 
 static void
@@ -618,7 +636,7 @@ test_suite_qofbook ( void )
     GNC_TEST_ADD( suitename, "shutting down", Fixture, NULL, setup, test_book_shutting_down, teardown );
     GNC_TEST_ADD( suitename, "set get data", Fixture, NULL, setup, test_book_set_get_data, teardown );
     GNC_TEST_ADD( suitename, "get collection", Fixture, NULL, setup, test_book_get_collection, teardown );
-    //GNC_TEST_ADD( suitename, "foreach collection", Fixture, NULL, setup, test_book_foreach_collection, teardown );
+    GNC_TEST_ADD( suitename, "foreach collection", Fixture, NULL, setup, test_book_foreach_collection, teardown );
     GNC_TEST_ADD( suitename, "set data finalizers", Fixture, NULL, setup, test_book_set_data_fin, teardown );
     GNC_TEST_ADD( suitename, "mark closed", Fixture, NULL, setup, test_book_mark_closed, teardown );
 }
