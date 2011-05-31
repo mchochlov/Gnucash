@@ -151,9 +151,9 @@ static void do_popup_menu(GncPluginPage *page, GdkEventButton *event);
 static gboolean gnc_main_window_popup_menu_cb (GtkWidget *widget, GncPluginPage *page);
 
 #ifdef MAC_INTEGRATION
-static void gtk_quartz_shutdown(GtkOSXApplication *theApp, gpointer data);
-static gboolean gtk_quartz_should_quit(GtkOSXApplication *theApp, GncMainWindow *window);
-static void gtk_quartz_set_menu(GncMainWindow* window);
+static void gnc_quartz_shutdown(GtkOSXApplication *theApp, gpointer data);
+static gboolean gnc_quartz_should_quit(GtkOSXApplication *theApp, GncMainWindow *window);
+static void gnc_quartz_set_menu(GncMainWindow* window);
 #endif
 
 /** The instance private data structure for an embedded window
@@ -2306,10 +2306,10 @@ gnc_main_window_destroy (GtkObject *object)
 
         if (gnc_window_get_progressbar_window() == GNC_WINDOW(window))
             gnc_window_set_progressbar_window(NULL);
-
+#ifndef MAC_INTEGRATION
         /* Update the "Windows" menu in all other windows */
         gnc_main_window_update_all_menu_items();
-
+#endif
         gnc_gconf_remove_notification(G_OBJECT(window), DESKTOP_GNOME_INTERFACE,
                                       GNC_MAIN_WINDOW_NAME);
         gnc_gconf_remove_notification(G_OBJECT(window), GCONF_GENERAL,
@@ -2356,8 +2356,11 @@ gnc_main_window_new (void)
     }
     active_windows = g_list_append (active_windows, window);
     gnc_main_window_update_title(window);
+#ifdef MAC_INTEGRATION
+    gnc_quartz_set_menu(window);
+#else
     gnc_main_window_update_all_menu_items();
-
+#endif
     gnc_engine_add_commit_error_callback( gnc_main_window_engine_commit_error_callback, window );
 
     return window;
@@ -3221,6 +3224,32 @@ connect_proxy (GtkUIManager *merge,
 /* CS: end copied code from gtk+/test/testmerge.c */
 
 static void
+gnc_main_window_window_menu (GncMainWindow *window)
+{
+    GncMainWindowPrivate *priv;
+    guint merge_id;
+#ifdef MAC_INTEGRATION
+    gchar *filename = gnc_gnome_locate_ui_file("gnc-windows-menu-ui-quartz.xml");
+#else
+    gchar *filename = gnc_gnome_locate_ui_file("gnc-windows-menu-ui.xml");
+#endif
+    GError *error = NULL;
+    g_assert(filename);
+    merge_id = gtk_ui_manager_add_ui_from_file(window->ui_merge, filename,
+					       &error);
+    g_free(filename);
+    g_assert(merge_id);
+#ifndef MAC_INTEGRATION
+    priv = GNC_MAIN_WINDOW_GET_PRIVATE(window);
+    gtk_action_group_add_radio_actions (priv->action_group,
+                                        radio_entries, n_radio_entries,
+                                        0,
+                                        G_CALLBACK(gnc_main_window_cmd_window_raise),
+                                        window);
+#endif
+};
+
+static void
 gnc_main_window_setup_window (GncMainWindow *window)
 {
     GncMainWindowPrivate *priv;
@@ -3334,7 +3363,7 @@ gnc_main_window_setup_window (GncMainWindow *window)
         g_assert(merge_id != 0);
     }
     g_free(filename);
-
+    gnc_main_window_window_menu(window);
     gnc_gconf_add_notification(G_OBJECT(window), GCONF_GENERAL,
                                gnc_main_window_gconf_changed,
                                GNC_MAIN_WINDOW_NAME);
@@ -3372,14 +3401,27 @@ gnc_main_window_setup_window (GncMainWindow *window)
 }
 
 #ifdef MAC_INTEGRATION
+/* Event handlers for the shutdown process.  Gnc_quartz_shutdown is
+ * connected to NSApplicationWillTerminate, the last chance to do
+ * anything before quitting. The problem is that it's launched from a
+ * CFRunLoop, not a g_main_loop, and if we call anything that would
+ * affect the main_loop we get an assert that we're in a subidiary
+ * loop.
+ */
 static void
-gtk_quartz_shutdown (GtkOSXApplication *theApp, gpointer data)
+gnc_quartz_shutdown (GtkOSXApplication *theApp, gpointer data)
 {
-    gnc_shutdown(0);
+/* Do Nothing. It's too late. */
 }
-
+/* Should quit responds to NSApplicationBlockTermination; returning
+ * TRUE means "don't terminate", FALSE means "do terminate". If we
+ * decide that it's OK to terminate, then we queue a gnc_shutdown for
+ * the next idle time (because we're not running in the main loop) and
+ * then tell the OS not to terminate. That gives the gnc_shutdown an
+ * opportunity to shut down.
+ */
 static gboolean
-gtk_quartz_should_quit (GtkOSXApplication *theApp, GncMainWindow *window)
+gnc_quartz_should_quit (GtkOSXApplication *theApp, GncMainWindow *window)
 {
     QofSession *session;
     gboolean needs_save, do_shutdown;
@@ -3392,12 +3434,13 @@ gtk_quartz_should_quit (GtkOSXApplication *theApp, GncMainWindow *window)
                  !gnc_file_save_in_progress();
     if (needs_save && gnc_main_window_prompt_for_save(GTK_WIDGET(window)))
         return TRUE;
-    gnc_shutdown(0);
-    return FALSE;
+
+    g_idle_add((GSourceFunc)gnc_shutdown, 0);
+    return TRUE;
 }
 
 static void
-gtk_quartz_set_menu(GncMainWindow* window)
+gnc_quartz_set_menu(GncMainWindow* window)
 {
     GtkOSXApplicationMenuGroup *group;
     GtkOSXApplication *theApp = g_object_new(GTK_TYPE_OSX_APPLICATION, NULL);
@@ -3409,6 +3452,8 @@ gtk_quartz_set_menu(GncMainWindow* window)
         menu = gtk_menu_item_get_submenu (GTK_MENU_ITEM (menu));
     gtk_widget_hide(menu);
     gtk_osxapplication_set_menu_bar (theApp, GTK_MENU_SHELL (menu));
+    if (gtk_osxapplication_use_quartz_accelerators(theApp))
+	gtk_osxapplication_set_use_quartz_accelerators(theApp, FALSE);
 
     item = gtk_ui_manager_get_widget (window->ui_merge,
                                       "/menubar/File/FileQuit");
@@ -3440,7 +3485,7 @@ gtk_quartz_set_menu(GncMainWindow* window)
                                       "/menubar/Windows");
     gtk_osxapplication_set_window_menu(theApp, GTK_MENU_ITEM(item));
     g_signal_connect(theApp, "NSApplicationBlockTermination",
-                     G_CALLBACK(gtk_quartz_should_quit), window);
+                     G_CALLBACK(gnc_quartz_should_quit), window);
 
 }
 #endif //MAC_INTEGRATION
@@ -3561,8 +3606,9 @@ gnc_main_window_switch_page (GtkNotebook *notebook,
                               g_list_length(priv->installed_pages) > 1);
 
     gnc_main_window_update_title(window);
+#ifndef MAC_INTEGRATION
     gnc_main_window_update_menu_item(window);
-
+#endif
     g_signal_emit (window, main_window_signals[PAGE_CHANGED], 0, page);
     LEAVE(" ");
 }
@@ -3920,10 +3966,11 @@ gnc_main_window_cmd_window_raise (GtkAction *action,
     value = gtk_radio_action_get_current_value(current);
     new_window = g_list_nth_data(active_windows, value);
     gtk_window_present(GTK_WINDOW(new_window));
-
+#ifndef MAC_INTEGRATION
     /* revert the change in the radio group
      * impossible while handling "changed" (G_SIGNAL_NO_RECURSE) */
     g_idle_add((GSourceFunc)gnc_main_window_update_radio_button, old_window);
+#endif
     LEAVE(" ");
 }
 
@@ -4057,12 +4104,12 @@ gnc_main_window_show_all_windows(void)
     {
         gtk_widget_show(GTK_WIDGET(window_iter->data));
 #ifdef MAC_INTEGRATION
-        gtk_quartz_set_menu(window_iter->data);
+        gnc_quartz_set_menu(window_iter->data);
 #endif
     }
 #ifdef MAC_INTEGRATION
     g_signal_connect(theApp, "NSApplicationWillTerminate",
-                     G_CALLBACK(gtk_quartz_shutdown), NULL);
+                     G_CALLBACK(gnc_quartz_shutdown), NULL);
     gtk_osxapplication_ready(theApp);
 #endif
 }

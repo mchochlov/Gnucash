@@ -289,22 +289,22 @@
 
           (gnc:html-document-set-style!
              ssdoc "total-number-cell"
-             'tag '("td" "b")
+             'tag '("td")
              'attribute (list "class" "total-number-cell"))
 
           (gnc:html-document-set-style!
              ssdoc "total-number-cell-neg"
-             'tag '("td" "b")
+             'tag '("td")
              'attribute (list "class" "total-number-cell neg"))
 
           (gnc:html-document-set-style!
              ssdoc "total-label-cell"
-             'tag '("td" "b")
+             'tag '("td")
              'attribute (list "class" "total-label-cell"))
 
           (gnc:html-document-set-style!
              ssdoc "centered-label-cell"
-             'tag '("td" "b")
+             'tag '("td")
              'attribute (list "class" "centered-label-cell"))
         )
         (begin ;; this is for gtkhtml
@@ -358,22 +358,22 @@
 
           (gnc:html-document-set-style!
              ssdoc "total-number-cell"
-             'tag '("td" "b")
+             'tag '("td")
              'attribute (list "align" "right"))
 
           (gnc:html-document-set-style!
              ssdoc "total-number-cell-neg"
-             'tag '("td" "b")
+             'tag '("td")
              'attribute (list "align" "right"))
 
           (gnc:html-document-set-style!
              ssdoc "total-label-cell"
-             'tag '("td" "b")
+             'tag '("td")
              'attribute (list "align" "left"))
 
           (gnc:html-document-set-style!
              ssdoc "centered-label-cell"
-             'tag '("td" "b")
+             'tag '("td")
              'attribute (list "align" "center"))
         )
     )
@@ -440,7 +440,7 @@
          (if show-preparer? 
              ;; title plus preparer info 
              (gnc:make-html-text
-              (gnc:html-markup-b headline)
+              (gnc:html-markup-h3 headline)
               (gnc:html-markup-br)
               (_ "Prepared by: ")
               (gnc:html-markup-b preparer)
@@ -454,7 +454,7 @@
 
              ;; title only 
              (gnc:make-html-text
-              (gnc:html-markup-b headline))))
+              (gnc:html-markup-h3 headline))))
         )
       
       ; only setup an image if we specified one
@@ -489,6 +489,7 @@
        (gnc:html-table-set-cell!
        t 3 headcolumn
        (gnc:make-html-text footer-text)))
+    (gnc:html-document-add-object! ssdoc (gnc:make-html-text "</center>")) ;;TODO: make this a div instead of <center> (deprecated)
     ssdoc))
 
 (gnc:define-html-style-sheet 
