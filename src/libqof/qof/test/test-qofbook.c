@@ -640,6 +640,44 @@ test_book_mark_closed( Fixture *fixture, gconstpointer pData )
     g_assert_cmpstr( &fixture->book->book_open, ==, "n" ); 
 }
 
+static void
+test_book_new_destroy( void )
+{
+    QofBook *book;
+    const char *key = "key";
+    const char *data = "data";
+        
+    g_test_message( "Testing book creation and initial setup" );
+    book = qof_book_new();
+    g_assert( book );
+    g_assert( QOF_IS_BOOK( book ) );
+    
+    g_test_message( "Testing book initial setup" );
+    g_assert( book->hash_of_collections );
+    g_assert( book->data_tables );
+    g_assert( book->data_table_finalizers );
+    g_assert_cmpint( g_hash_table_size( book->hash_of_collections ), ==, 1 );
+    g_assert( g_hash_table_lookup ( book->hash_of_collections, QOF_ID_BOOK ) != NULL );
+    g_assert_cmpint( g_hash_table_size( book->data_tables ), ==, 0 );
+    g_assert_cmpint( g_hash_table_size( book->data_table_finalizers ), ==, 0 );
+    g_assert_cmpstr( &book->book_open, ==, "y");
+    g_assert( !book->read_only );
+    g_assert_cmpint( book->version, ==, 0 );
+    
+    /* set finalizer */
+    qof_book_set_data_fin( book, key, (gpointer) data, mock_final_cb );
+    test_struct.called = FALSE;
+    
+    g_test_message( "Testing book destroy" );
+    qof_book_destroy( book );
+    g_assert( qof_book_shutting_down( book ) );
+    g_assert( test_struct.called );
+    g_assert( book->hash_of_collections );
+    g_assert_cmpint( g_hash_table_size( book->hash_of_collections ), ==, 0 );
+    g_assert( !book->data_tables );
+    g_assert( !book->data_table_finalizers );    
+}
+
 void
 test_suite_qofbook ( void )
 {
@@ -663,4 +701,5 @@ test_suite_qofbook ( void )
     GNC_TEST_ADD( suitename, "foreach collection", Fixture, NULL, setup, test_book_foreach_collection, teardown );
     GNC_TEST_ADD_FUNC( suitename, "set data finalizers", test_book_set_data_fin );
     GNC_TEST_ADD( suitename, "mark closed", Fixture, NULL, setup, test_book_mark_closed, teardown );
+    GNC_TEST_ADD_FUNC( suitename, "book new and destroy", test_book_new_destroy );
 }
