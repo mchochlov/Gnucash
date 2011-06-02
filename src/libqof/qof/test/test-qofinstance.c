@@ -22,6 +22,7 @@
 #include "config.h"
 #include <glib.h>
 #include "qof.h"
+#include "test-stuff.h"
 
 static const gchar *suitename = "/qof/qofinstance";
 void test_suite_qofinstance ( void );
@@ -58,6 +59,6 @@ test_book_readonly( Fixture *fixture, gconstpointer pData )
 void
 test_suite_qofinstance ( void )
 {
-    g_test_add( suitename, Fixture, NULL, setup, test_book_readonly, teardown );
+    GNC_TEST_ADD( suitename, "book readonly", Fixture, NULL, setup, test_book_readonly, teardown );
 
 }
