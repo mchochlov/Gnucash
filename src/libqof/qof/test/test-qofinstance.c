@@ -26,11 +26,56 @@
 
 static const gchar *suitename = "/qof/qofinstance";
 void test_suite_qofinstance ( void );
+static gchar* error_message;
+
+typedef struct
+{
+    GObject parent_instance;
+} MockObject;
+
+typedef struct
+{
+    GObjectClass parent_class;
+} MockObjectClass;
+
+#define MOCK_TYPE_OBJECT ( mock_object_get_type() )
+
+GType mock_object_get_type( void );
+
+GType
+mock_object_get_type ( void )
+{
+    static GType type = 0;
+    static const GTypeInfo info = {
+	sizeof( MockObjectClass ),
+	NULL,
+	NULL,
+	(GClassInitFunc) NULL,
+	NULL,
+	NULL,
+	sizeof( MockObject ),
+	0,
+	(GInstanceInitFunc) NULL
+    };
+    type = g_type_register_static( G_TYPE_OBJECT, "MockObject", &info, 0);
+    return type;
+}
 
 typedef struct
 {
     QofInstance *instance;
 } Fixture;
+
+/* use g_free on error_message after this function been called */
+static gboolean
+fatal_handler ( const char * log_domain, 
+		GLogLevelFlags log_level, 
+		const gchar *msg, 
+		gpointer user_data)
+{
+    error_message = (gchar *) g_strdup( msg );
+    return FALSE;
+}
 
 static void
 setup( Fixture *fixture, gconstpointer pData )
@@ -55,10 +100,45 @@ test_book_readonly( Fixture *fixture, gconstpointer pData )
     g_assert( qof_book_is_readonly( book ) );
 }
 
+static void
+test_instance_set_get_book( void )
+{
+    QofInstance *inst;
+    QofBook *book;
+    MockObject *mock_object;
+    
+    g_test_log_set_fatal_handler ( ( GTestLogFatalFunc )fatal_handler, NULL );
+    /* set up */
+    mock_object = g_object_new( MOCK_TYPE_OBJECT, NULL );
+    book = qof_book_new();
+    inst = g_object_new(QOF_TYPE_INSTANCE, NULL);
+    
+    g_test_message( "Setting up book with incorrect object" );
+    qof_instance_set_book( mock_object, book );
+    g_assert_cmpstr( error_message, ==, "qof_instance_set_book: assertion `QOF_IS_INSTANCE(inst)' failed" );
+    g_free( error_message );
+    
+    g_test_message( "Setting up book with correct object" );
+    qof_instance_set_book( inst, book );
+    g_assert( book == qof_instance_get_book( inst ) );
+    
+    g_test_message( "Getting book when instance is null" );
+    g_assert( qof_instance_get_book( NULL ) == NULL );
+    
+    g_test_message( "Getting book with incorrect object" );
+    g_assert( qof_instance_get_book( mock_object ) == NULL );
+    g_assert_cmpstr( error_message, ==, "qof_instance_get_book: assertion `QOF_IS_INSTANCE(inst)' failed" );
+    g_free( error_message );
+    
+    /* Clean up */
+    g_object_unref( mock_object );
+    qof_book_destroy( book );
+    g_object_unref( inst );
+}
 
 void
 test_suite_qofinstance ( void )
 {
     GNC_TEST_ADD( suitename, "book readonly", Fixture, NULL, setup, test_book_readonly, teardown );
-
+    GNC_TEST_ADD_FUNC( suitename, "set get book", test_instance_set_get_book );
 }
