@@ -124,9 +124,42 @@ test_instance_set_get_book( void )
     g_object_unref( inst );
 }
 
+static void
+test_instance_set_get_guid( void )
+{
+    QofInstance *inst;
+    GncGUID *gncGuid;
+    
+    /* on null instance deprecated getter returns empty guid
+     * while instance_get_guid returns null
+     */
+    g_assert( !qof_instance_get_guid( NULL ) );
+    g_assert( qof_entity_get_guid( NULL ) == guid_null() );
+    
+    /* set up */
+    gncGuid = guid_malloc();
+    guid_new( gncGuid );
+    inst = g_object_new(QOF_TYPE_INSTANCE, NULL);    
+    g_assert( QOF_IS_INSTANCE( inst ) );
+    g_assert( gncGuid );
+    
+    /* guid already exists after instance init */
+    g_test_message( "Setting new guid" );
+    g_assert( qof_instance_get_guid( inst ) );
+    g_assert( !guid_equal( gncGuid, qof_instance_get_guid( inst ) ) );
+    qof_instance_set_guid( inst, gncGuid );
+    g_assert( guid_equal( gncGuid, qof_instance_get_guid( inst ) ) );
+    g_assert( guid_equal( gncGuid, qof_entity_get_guid( inst ) ) );
+    
+    /* Clean up */
+    guid_free( gncGuid );
+    g_object_unref( inst );
+}
+
 void
 test_suite_qofinstance ( void )
 {
     GNC_TEST_ADD( suitename, "book readonly", Fixture, NULL, setup, test_book_readonly, teardown );
     GNC_TEST_ADD_FUNC( suitename, "set get book", test_instance_set_get_book );
+    GNC_TEST_ADD_FUNC( suitename, "set get guid", test_instance_set_get_guid );
 }
