@@ -105,33 +105,21 @@ test_instance_set_get_book( void )
 {
     QofInstance *inst;
     QofBook *book;
-    MockObject *mock_object;
     
-    g_test_log_set_fatal_handler ( ( GTestLogFatalFunc )fatal_handler, NULL );
     /* set up */
-    mock_object = g_object_new( MOCK_TYPE_OBJECT, NULL );
     book = qof_book_new();
     inst = g_object_new(QOF_TYPE_INSTANCE, NULL);
     
-    g_test_message( "Setting up book with incorrect object" );
-    qof_instance_set_book( mock_object, book );
-    g_assert_cmpstr( error_message, ==, "qof_instance_set_book: assertion `QOF_IS_INSTANCE(inst)' failed" );
-    g_free( error_message );
+    g_assert( QOF_IS_INSTANCE( inst ) );
     
-    g_test_message( "Setting up book with correct object" );
+    g_test_message( "Setting and getting book" );
     qof_instance_set_book( inst, book );
     g_assert( book == qof_instance_get_book( inst ) );
     
     g_test_message( "Getting book when instance is null" );
     g_assert( qof_instance_get_book( NULL ) == NULL );
     
-    g_test_message( "Getting book with incorrect object" );
-    g_assert( qof_instance_get_book( mock_object ) == NULL );
-    g_assert_cmpstr( error_message, ==, "qof_instance_get_book: assertion `QOF_IS_INSTANCE(inst)' failed" );
-    g_free( error_message );
-    
     /* Clean up */
-    g_object_unref( mock_object );
     qof_book_destroy( book );
     g_object_unref( inst );
 }
