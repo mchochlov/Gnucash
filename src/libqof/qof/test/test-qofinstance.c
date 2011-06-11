@@ -92,15 +92,6 @@ teardown( Fixture *fixture, gconstpointer pData )
 }
 
 static void
-test_book_readonly( Fixture *fixture, gconstpointer pData )
-{
-    QofBook *book = qof_instance_get_book( fixture->instance );
-    g_assert( !qof_book_is_readonly( book ) );
-    qof_book_mark_readonly( book );
-    g_assert( qof_book_is_readonly( book ) );
-}
-
-static void
 test_instance_set_get_book( void )
 {
     QofInstance *inst;
@@ -206,7 +197,6 @@ test_instance_new_destroy( void )
 void
 test_suite_qofinstance ( void )
 {
-    GNC_TEST_ADD( suitename, "book readonly", Fixture, NULL, setup, test_book_readonly, teardown );
     GNC_TEST_ADD_FUNC( suitename, "set get book", test_instance_set_get_book );
     GNC_TEST_ADD_FUNC( suitename, "set get guid", test_instance_set_get_guid );
     GNC_TEST_ADD_FUNC( suitename, "instance new and destroy", test_instance_set_get_guid );
