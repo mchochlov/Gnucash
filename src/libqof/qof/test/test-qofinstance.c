@@ -63,7 +63,7 @@ mock_object_get_type ( void )
 
 typedef struct
 {
-    QofInstance *instance;
+    QofInstance *inst;
 } Fixture;
 
 /* use g_free on error_message after this function been called */
@@ -80,45 +80,39 @@ fatal_handler ( const char * log_domain,
 static void
 setup( Fixture *fixture, gconstpointer pData )
 {
-    fixture->instance = g_object_new(QOF_TYPE_INSTANCE, NULL);
-    qof_instance_set_book( fixture->instance, qof_book_new() );
+    fixture->inst = g_object_new(QOF_TYPE_INSTANCE, NULL);
 }
 
 static void
 teardown( Fixture *fixture, gconstpointer pData )
 {
-    qof_book_destroy( qof_instance_get_book( fixture->instance ) );
-    g_object_unref(fixture->instance);
+    g_object_unref(fixture->inst);
 }
 
 static void
-test_instance_set_get_book( void )
+test_instance_set_get_book( Fixture *fixture, gconstpointer pData )
 {
-    QofInstance *inst;
     QofBook *book;
     
     /* set up */
     book = qof_book_new();
-    inst = g_object_new(QOF_TYPE_INSTANCE, NULL);
     
-    g_assert( QOF_IS_INSTANCE( inst ) );
+    g_assert( QOF_IS_INSTANCE( fixture->inst ) );
     
     g_test_message( "Setting and getting book" );
-    qof_instance_set_book( inst, book );
-    g_assert( book == qof_instance_get_book( inst ) );
+    qof_instance_set_book( fixture->inst, book );
+    g_assert( book == qof_instance_get_book( fixture->inst ) );
     
     g_test_message( "Getting book when instance is null" );
     g_assert( qof_instance_get_book( NULL ) == NULL );
     
     /* Clean up */
     qof_book_destroy( book );
-    g_object_unref( inst );
 }
 
 static void
-test_instance_set_get_guid( void )
+test_instance_set_get_guid( Fixture *fixture, gconstpointer pData )
 {
-    QofInstance *inst;
     GncGUID *gncGuid;
     
     /* on null instance deprecated getter returns empty guid
@@ -130,21 +124,19 @@ test_instance_set_get_guid( void )
     /* set up */
     gncGuid = guid_malloc();
     guid_new( gncGuid );
-    inst = g_object_new(QOF_TYPE_INSTANCE, NULL);    
-    g_assert( QOF_IS_INSTANCE( inst ) );
+    g_assert( QOF_IS_INSTANCE( fixture->inst ) );
     g_assert( gncGuid );
     
     /* guid already exists after instance init */
     g_test_message( "Setting new guid" );
-    g_assert( qof_instance_get_guid( inst ) );
-    g_assert( !guid_equal( gncGuid, qof_instance_get_guid( inst ) ) );
-    qof_instance_set_guid( inst, gncGuid );
-    g_assert( guid_equal( gncGuid, qof_instance_get_guid( inst ) ) );
-    g_assert( guid_equal( gncGuid, qof_entity_get_guid( inst ) ) );
+    g_assert( qof_instance_get_guid( fixture->inst ) );
+    g_assert( !guid_equal( gncGuid, qof_instance_get_guid( fixture->inst ) ) );
+    qof_instance_set_guid( fixture->inst, gncGuid );
+    g_assert( guid_equal( gncGuid, qof_instance_get_guid( fixture->inst ) ) );
+    g_assert( guid_equal( gncGuid, qof_entity_get_guid( fixture->inst ) ) );
     
     /* Clean up */
     guid_free( gncGuid );
-    g_object_unref( inst );
 }
 
 static void
@@ -185,19 +177,18 @@ test_instance_new_destroy( void )
     g_object_unref( inst );
     /* test fields were deinitialized */
     g_assert( inst );
-    g_assert( qof_instance_get_collection( inst ) == NULL );
+    //g_assert( qof_instance_get_collection( inst ) == NULL );
     g_assert( inst->e_type == NULL );
     g_assert( inst->kvp_data == NULL );
     g_assert_cmpint( qof_instance_get_editlevel( inst ), ==, 0 );
     g_assert( !qof_instance_get_destroying( inst ) );
     g_assert( !qof_instance_get_dirty_flag( inst ) );
-    
 }
 
 void
 test_suite_qofinstance ( void )
 {
-    GNC_TEST_ADD_FUNC( suitename, "set get book", test_instance_set_get_book );
-    GNC_TEST_ADD_FUNC( suitename, "set get guid", test_instance_set_get_guid );
     GNC_TEST_ADD_FUNC( suitename, "instance new and destroy", test_instance_set_get_guid );
+    GNC_TEST_ADD( suitename, "set get book", Fixture, NULL, setup, test_instance_set_get_book, teardown );
+    GNC_TEST_ADD( suitename, "set get guid", Fixture, NULL, setup, test_instance_set_get_guid, teardown );
 }
