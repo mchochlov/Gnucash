@@ -156,10 +156,58 @@ test_instance_set_get_guid( void )
     g_object_unref( inst );
 }
 
+static void
+test_instance_new_destroy( void )
+{
+    /* qofinstance var */
+    QofInstance *inst;
+    QofInstanceClass *klass;
+    /* test var */
+    Timespec timespec_priv;
+  
+    g_test_message( "Testing qofinstance object initialization" );
+    inst = g_object_new(QOF_TYPE_INSTANCE, NULL);
+    g_assert( QOF_IS_INSTANCE( inst ) );
+    /* test class fields */
+    klass = QOF_INSTANCE_GET_CLASS( inst );
+    g_assert( QOF_IS_INSTANCE_CLASS( klass ) );
+    g_assert( klass->get_display_name == NULL );
+    g_assert( klass->refers_to_object == NULL );
+    g_assert( klass->get_typed_referring_object_list == NULL );
+    /* testing initial values */
+    g_assert( qof_instance_get_guid( inst ) );
+    g_assert( qof_instance_get_collection( inst ) );
+    g_assert( qof_instance_get_book( inst ) == NULL );
+    g_assert( inst->kvp_data );
+    timespec_priv = qof_instance_get_last_update( inst );
+    g_assert_cmpint( timespec_priv.tv_sec, ==, 0 );
+    g_assert_cmpint( timespec_priv.tv_nsec, ==, -1 );
+    g_assert_cmpint( qof_instance_get_editlevel( inst ), ==, 0 );
+    g_assert( !qof_instance_get_destroying( inst ) );
+    g_assert( !qof_instance_get_dirty_flag( inst ) );
+    g_assert( qof_instance_get_infant( inst ) );
+    g_assert_cmpint( qof_instance_get_version( inst ), ==, 0 );
+    g_assert_cmpint( qof_instance_get_version_check( inst ), ==, 0 );
+    g_assert_cmpint( qof_instance_get_idata( inst ), ==, 0 );
+    
+    g_test_message( "Testing object destruction" );
+    g_object_unref( inst );
+    /* test fields were deinitialized */
+    g_assert( inst );
+    g_assert( qof_instance_get_collection( inst ) == NULL );
+    g_assert( inst->e_type == NULL );
+    g_assert( inst->kvp_data == NULL );
+    g_assert_cmpint( qof_instance_get_editlevel( inst ), ==, 0 );
+    g_assert( !qof_instance_get_destroying( inst ) );
+    g_assert( !qof_instance_get_dirty_flag( inst ) );
+    
+}
+
 void
 test_suite_qofinstance ( void )
 {
     GNC_TEST_ADD( suitename, "book readonly", Fixture, NULL, setup, test_book_readonly, teardown );
     GNC_TEST_ADD_FUNC( suitename, "set get book", test_instance_set_get_book );
     GNC_TEST_ADD_FUNC( suitename, "set get guid", test_instance_set_get_guid );
+    GNC_TEST_ADD_FUNC( suitename, "instance new and destroy", test_instance_set_get_guid );
 }
