@@ -159,7 +159,7 @@ test_instance_new_destroy( void )
     g_assert( klass->get_typed_referring_object_list == NULL );
     /* testing initial values */
     g_assert( qof_instance_get_guid( inst ) );
-    g_assert( qof_instance_get_collection( inst ) );
+    g_assert( !qof_instance_get_collection( inst ) );
     g_assert( qof_instance_get_book( inst ) == NULL );
     g_assert( inst->kvp_data );
     timespec_priv = qof_instance_get_last_update( inst );
@@ -177,18 +177,32 @@ test_instance_new_destroy( void )
     g_object_unref( inst );
     /* test fields were deinitialized */
     g_assert( inst );
-    //g_assert( qof_instance_get_collection( inst ) == NULL );
+    g_assert( !QOF_IS_INSTANCE( inst ) );
+    /* set fatal handler */
+    g_test_log_set_fatal_handler ( ( GTestLogFatalFunc )fatal_handler, NULL );
+    g_assert( qof_instance_get_collection( inst ) == NULL );
+    g_assert( g_strrstr( error_message, "assertion `QOF_IS_INSTANCE(ptr)' failed" ) != NULL );
+    g_free( error_message );
+    
     g_assert( inst->e_type == NULL );
     g_assert( inst->kvp_data == NULL );
     g_assert_cmpint( qof_instance_get_editlevel( inst ), ==, 0 );
+    g_assert( g_strrstr( error_message, "assertion `QOF_IS_INSTANCE(ptr)' failed" ) != NULL );
+    g_free( error_message );
+    
     g_assert( !qof_instance_get_destroying( inst ) );
+    g_assert( g_strrstr( error_message, "assertion `QOF_IS_INSTANCE(ptr)' failed" ) != NULL );
+    g_free( error_message );
+    
     g_assert( !qof_instance_get_dirty_flag( inst ) );
+    g_assert( g_strrstr( error_message, "assertion `QOF_IS_INSTANCE(ptr)' failed" ) != NULL );
+    g_free( error_message );
 }
 
 void
 test_suite_qofinstance ( void )
 {
-    GNC_TEST_ADD_FUNC( suitename, "instance new and destroy", test_instance_set_get_guid );
     GNC_TEST_ADD( suitename, "set get book", Fixture, NULL, setup, test_instance_set_get_book, teardown );
     GNC_TEST_ADD( suitename, "set get guid", Fixture, NULL, setup, test_instance_set_get_guid, teardown );
+    GNC_TEST_ADD_FUNC( suitename, "instance new and destroy", test_instance_new_destroy );
 }
