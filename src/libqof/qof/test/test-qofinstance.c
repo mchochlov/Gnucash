@@ -199,10 +199,44 @@ test_instance_new_destroy( void )
     g_free( error_message );
 }
 
+static void
+test_instance_init_data( Fixture *fixture, gconstpointer pData )
+{
+    QofIdType test_type = "test type";
+    QofBook *book;
+    const GncGUID *gncguid_before, *gncguid_after;
+    
+    /* set up */
+    g_assert( QOF_IS_INSTANCE( fixture->inst ) );
+    book = qof_book_new();
+    g_assert( QOF_IS_BOOK( book ) );
+    /* set fatal handler */
+    g_test_log_set_fatal_handler ( ( GTestLogFatalFunc )fatal_handler, NULL );
+    
+    g_test_message( "Running test with correct initial data" );
+    gncguid_before = qof_instance_get_guid( fixture->inst );
+    g_assert( gncguid_before );
+    g_assert( qof_instance_get_book( fixture->inst ) == NULL );
+    g_assert( book->hash_of_collections != NULL );
+    g_assert( qof_instance_get_collection( fixture->inst ) == NULL );
+    qof_instance_init_data( fixture->inst, test_type, book );
+    g_assert( qof_instance_get_book( fixture->inst ) == book );
+    gncguid_after = qof_instance_get_guid( fixture->inst );
+    g_assert( guid_equal( gncguid_before, gncguid_after ) );
+    g_assert( qof_instance_get_collection( fixture->inst ) != NULL );
+    g_assert_cmpstr( fixture->inst->e_type, ==, test_type );
+    g_assert( qof_collection_lookup_entity( qof_instance_get_collection( fixture->inst ), gncguid_after ) == fixture->inst );
+        
+    /* clean up */
+    qof_book_destroy( book );
+}
+
 void
 test_suite_qofinstance ( void )
 {
     GNC_TEST_ADD( suitename, "set get book", Fixture, NULL, setup, test_instance_set_get_book, teardown );
     GNC_TEST_ADD( suitename, "set get guid", Fixture, NULL, setup, test_instance_set_get_guid, teardown );
     GNC_TEST_ADD_FUNC( suitename, "instance new and destroy", test_instance_new_destroy );
+    GNC_TEST_ADD( suitename, "init data", Fixture, NULL, setup, test_instance_init_data, teardown );
+
 }
