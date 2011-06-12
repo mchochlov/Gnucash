@@ -231,6 +231,36 @@ test_instance_init_data( Fixture *fixture, gconstpointer pData )
     qof_book_destroy( book );
 }
 
+static void
+test_instance_get_set_slots( Fixture *fixture, gconstpointer pData )
+{
+    KvpFrame *kvp_frame, *kvp_frame2;
+    
+    /* set up */
+    g_assert( fixture->inst );
+    kvp_frame = qof_instance_get_slots( fixture->inst );
+    g_assert( kvp_frame );
+    
+    g_test_message( "Test when kvp frame is null" );
+    qof_instance_set_slots( fixture->inst, NULL );
+    g_assert( kvp_frame == qof_instance_get_slots( fixture->inst ) );
+    g_assert( qof_instance_get_dirty_flag( fixture->inst ) );
+    
+    g_test_message( "Test when kvp frame is the same" );
+    qof_instance_set_slots( fixture->inst, kvp_frame );
+    g_assert( kvp_frame == qof_instance_get_slots( fixture->inst ) );
+    g_assert( qof_instance_get_dirty_flag( fixture->inst ) );
+    
+    g_test_message( "Test when kvp frame is not the same" );
+    kvp_frame2 = kvp_frame_new();
+    g_assert( kvp_frame != kvp_frame2 );
+    qof_instance_set_slots( fixture->inst, kvp_frame2 );
+    g_assert( kvp_frame2 == qof_instance_get_slots( fixture->inst ) );
+    g_assert( qof_instance_get_dirty_flag( fixture->inst ) );
+    
+    kvp_frame_delete( kvp_frame2 );
+}
+
 void
 test_suite_qofinstance ( void )
 {
@@ -238,5 +268,5 @@ test_suite_qofinstance ( void )
     GNC_TEST_ADD( suitename, "set get guid", Fixture, NULL, setup, test_instance_set_get_guid, teardown );
     GNC_TEST_ADD_FUNC( suitename, "instance new and destroy", test_instance_new_destroy );
     GNC_TEST_ADD( suitename, "init data", Fixture, NULL, setup, test_instance_init_data, teardown );
-
+    GNC_TEST_ADD( suitename, "get set slots", Fixture, NULL, setup, test_instance_get_set_slots, teardown );
 }
