@@ -30,39 +30,6 @@ static gchar* error_message;
 
 typedef struct
 {
-    GObject parent_instance;
-} MockObject;
-
-typedef struct
-{
-    GObjectClass parent_class;
-} MockObjectClass;
-
-#define MOCK_TYPE_OBJECT ( mock_object_get_type() )
-
-GType mock_object_get_type( void );
-
-GType
-mock_object_get_type ( void )
-{
-    static GType type = 0;
-    static const GTypeInfo info = {
-	sizeof( MockObjectClass ),
-	NULL,
-	NULL,
-	(GClassInitFunc) NULL,
-	NULL,
-	NULL,
-	sizeof( MockObject ),
-	0,
-	(GInstanceInitFunc) NULL
-    };
-    type = g_type_register_static( G_TYPE_OBJECT, "MockObject", &info, 0);
-    return type;
-}
-
-typedef struct
-{
     QofInstance *inst;
 } Fixture;
 
