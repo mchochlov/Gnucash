@@ -239,7 +239,7 @@ test_instance_get_set_slots( Fixture *fixture, gconstpointer pData )
 }
 
 static void
-test_instance_version_cmp( Fixture *fixture, gconstpointer pData )
+test_instance_version_cmp( void )
 {
     QofInstance *left, *right;
     int result;
@@ -320,5 +320,5 @@ test_suite_qofinstance ( void )
     GNC_TEST_ADD_FUNC( suitename, "instance new and destroy", test_instance_new_destroy );
     GNC_TEST_ADD_FUNC( suitename, "init data", test_instance_init_data );
     GNC_TEST_ADD( suitename, "get set slots", Fixture, NULL, setup, test_instance_get_set_slots, teardown );
-    GNC_TEST_ADD( suitename, "version compare", Fixture, NULL, setup, test_instance_version_cmp, teardown );
+    GNC_TEST_ADD_FUNC( suitename, "version compare", test_instance_version_cmp );
 }
