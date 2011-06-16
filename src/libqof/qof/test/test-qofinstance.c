@@ -238,6 +238,80 @@ test_instance_get_set_slots( Fixture *fixture, gconstpointer pData )
     
 }
 
+static void
+test_instance_version_cmp( Fixture *fixture, gconstpointer pData )
+{
+    QofInstance *left, *right;
+    int result;
+    Timespec timespec_left, timespec_right;
+    
+    /* set up*/
+    left = g_object_new( QOF_TYPE_INSTANCE, NULL );
+    right = g_object_new( QOF_TYPE_INSTANCE, NULL );
+    
+    g_test_message( "Test both null" );
+    result = qof_instance_version_cmp( NULL, NULL );
+    g_assert_cmpint( result, ==, 0 );
+    
+    g_test_message( "Test left null" );
+    result = qof_instance_version_cmp( NULL, right );
+    g_assert_cmpint( result, ==, -1 );
+    
+    g_test_message( "Test right null" );
+    result = qof_instance_version_cmp( left, NULL );
+    g_assert_cmpint( result, ==, 1 );
+    
+    g_test_message( "Test left tv_sec lesser than right" );
+    timespec_left.tv_sec = 0;
+    timespec_right.tv_sec = 1;
+    qof_instance_set_last_update( left, timespec_left );
+    qof_instance_set_last_update( right, timespec_right );
+    result = qof_instance_version_cmp( left, right );
+    g_assert_cmpint( result, ==, -1 );
+    
+    g_test_message( "Test right tv_sec lesser than left" );
+    timespec_left.tv_sec = 1;
+    timespec_right.tv_sec = 0;
+    qof_instance_set_last_update( left, timespec_left );
+    qof_instance_set_last_update( right, timespec_right );
+    result = qof_instance_version_cmp( left, right );
+    g_assert_cmpint( result, ==, 1 );
+    
+    g_test_message( "Test left tv_nsec lesser than right" );
+    timespec_left.tv_sec = 1;
+    timespec_left.tv_nsec = 0;
+    timespec_right.tv_sec = 1;
+    timespec_right.tv_nsec = 1;
+    qof_instance_set_last_update( left, timespec_left );
+    qof_instance_set_last_update( right, timespec_right );
+    result = qof_instance_version_cmp( left, right );
+    g_assert_cmpint( result, ==, -1 );
+    
+    g_test_message( "Test right tv_sec lesser than left" );
+    timespec_left.tv_sec = 1;
+    timespec_left.tv_nsec = 1;
+    timespec_right.tv_sec = 1;
+    timespec_right.tv_nsec = 0;
+    qof_instance_set_last_update( left, timespec_left );
+    qof_instance_set_last_update( right, timespec_right );
+    result = qof_instance_version_cmp( left, right );
+    g_assert_cmpint( result, ==, 1 );
+    
+    g_test_message( "Test both equal" );
+    timespec_left.tv_sec = 1;
+    timespec_left.tv_nsec = 1;
+    timespec_right.tv_sec = 1;
+    timespec_right.tv_nsec = 1;
+    qof_instance_set_last_update( left, timespec_left );
+    qof_instance_set_last_update( right, timespec_right );
+    result = qof_instance_version_cmp( left, right );
+    g_assert_cmpint( result, ==, 0 );
+    
+    /* clear */
+    g_object_unref( left );
+    g_object_unref( right );
+}
+
 void
 test_suite_qofinstance ( void )
 {
@@ -246,4 +320,5 @@ test_suite_qofinstance ( void )
     GNC_TEST_ADD_FUNC( suitename, "instance new and destroy", test_instance_new_destroy );
     GNC_TEST_ADD_FUNC( suitename, "init data", test_instance_init_data );
     GNC_TEST_ADD( suitename, "get set slots", Fixture, NULL, setup, test_instance_get_set_slots, teardown );
+    GNC_TEST_ADD( suitename, "version compare", Fixture, NULL, setup, test_instance_version_cmp, teardown );
 }
