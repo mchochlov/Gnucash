@@ -27,6 +27,7 @@
 static const gchar *suitename = "/qof/qofinstance";
 void test_suite_qofinstance ( void );
 static gchar* error_message;
+static gboolean is_called;
 
 typedef struct
 {
@@ -395,6 +396,57 @@ test_instance_gemini_and_lookup( void )
     qof_book_destroy( from_book );
 }
 
+/* mock display name function */
+static gchar*
+mock_get_display_name(const QofInstance* inst)
+{
+    gchar *display_name;
+    
+    g_assert( inst );
+    g_assert( QOF_INSTANCE_GET_CLASS( inst )->get_display_name == mock_get_display_name );
+    is_called = TRUE;
+    display_name = g_strdup_printf("Mock display name %p", inst );
+    return display_name;
+}
+
+static void
+test_instance_display_name( Fixture *fixture, gconstpointer pData )
+{
+    QofIdType type = "test type";
+    QofCollection *col;
+    gchar *display_name, *default_display_name, *mock_display_name;
+  
+    /* setup */
+    g_assert( fixture->inst );
+    is_called = FALSE;
+    col = qof_collection_new ( type );
+    g_assert( col );
+    qof_instance_set_collection( fixture->inst, col );
+    g_assert( qof_instance_get_collection( fixture->inst ) );
+    default_display_name = g_strdup_printf( "Object %s %p", type, fixture->inst );
+    mock_display_name = g_strdup_printf( "Mock display name %p", fixture->inst );
+    
+    g_test_message( "Test instance when display name not set" );
+    g_assert( QOF_INSTANCE_GET_CLASS( fixture->inst )->get_display_name == NULL );
+    display_name = qof_instance_get_display_name( fixture->inst );
+    g_assert( !is_called );
+    g_assert_cmpstr( display_name, ==, default_display_name );
+    g_free( display_name );
+    
+    g_test_message( "Test instance when display name is set" );
+    QOF_INSTANCE_GET_CLASS( fixture->inst )->get_display_name = mock_get_display_name;
+    display_name = qof_instance_get_display_name( fixture->inst );
+    g_assert( is_called );
+    g_assert_cmpstr( display_name, ==, mock_display_name );
+    g_free( display_name );
+    
+    /* clean up */
+    g_free( default_display_name );
+    g_free( mock_display_name );
+    qof_instance_set_collection( fixture->inst, NULL );
+    qof_collection_destroy( col );
+}
+
 void
 test_suite_qofinstance ( void )
 {
@@ -406,4 +458,5 @@ test_suite_qofinstance ( void )
     GNC_TEST_ADD_FUNC( suitename, "version compare", test_instance_version_cmp );
     GNC_TEST_ADD( suitename, "get set dirty", Fixture, NULL, setup, test_instance_get_set_dirty, teardown );
     GNC_TEST_ADD_FUNC( suitename, "gemini creation and lookup", test_instance_gemini_and_lookup );
+    GNC_TEST_ADD( suitename, "display name", Fixture, NULL, setup, test_instance_display_name, teardown );
 }
