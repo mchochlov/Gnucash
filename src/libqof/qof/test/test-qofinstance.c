@@ -23,6 +23,7 @@
 #include <glib.h>
 #include "qof.h"
 #include "test-stuff.h"
+#include "qofbackend-p.h"
 
 static const gchar *suitename = "/qof/qofinstance";
 void test_suite_qofinstance ( void );
@@ -447,6 +448,73 @@ test_instance_display_name( Fixture *fixture, gconstpointer pData )
     qof_collection_destroy( col );
 }
 
+static void
+mock_backend_begin( QofBackend *be, QofInstance *inst )
+{
+    g_assert( be );
+    g_assert( inst );
+    g_assert( be->begin == mock_backend_begin );
+    g_assert_cmpstr( inst->e_type, ==, "test type" );
+    is_called = TRUE;
+}
+
+static void
+test_instance_begin_edit( Fixture *fixture, gconstpointer pData )
+{
+    QofBackend *be;
+    QofBook *book;
+    gboolean result;
+    
+    /* setup */
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    qof_backend_init( be );
+    book = qof_book_new();
+    g_assert( book );
+    g_assert( QOF_IS_BOOK( book ) );
+    qof_book_set_backend( book, be );
+    g_assert( fixture->inst );
+    fixture->inst->e_type = "test type";
+    g_assert( qof_instance_get_dirty_flag( fixture->inst ) == FALSE );
+    g_assert_cmpint( qof_instance_get_editlevel( fixture->inst ), ==, 0 );
+    
+    g_test_message( "Test when instance is null" );
+    result = qof_begin_edit( NULL );
+    g_assert( result == FALSE );
+    
+    g_test_message( "Test when instance's editlevel is >= 1" );
+    qof_instance_increase_editlevel( fixture->inst );
+    result = qof_begin_edit( fixture->inst );
+    g_assert( result == FALSE );
+    g_assert_cmpint( qof_instance_get_editlevel( fixture->inst ), ==, 2 );
+    
+    g_test_message( "Test when instance's editlevel is <= 0 and backend not set" );
+    qof_instance_reset_editlevel( fixture->inst );
+    result = qof_begin_edit( fixture->inst );
+    g_assert( result == TRUE );
+    g_assert_cmpint( qof_instance_get_editlevel( fixture->inst ), ==, 1 );
+    g_assert( qof_instance_get_dirty_flag( fixture->inst ) == TRUE );
+    
+    g_test_message( "Test when instance's editlevel is <= 0 and backend is set" );
+    result = FALSE;
+    is_called = FALSE;
+    qof_instance_reset_editlevel( fixture->inst );
+    qof_instance_set_dirty_flag( fixture->inst, FALSE );
+    qof_instance_set_book( fixture->inst, book );
+    be->begin = mock_backend_begin;
+    result = qof_begin_edit( fixture->inst );
+    g_assert( result == TRUE );
+    g_assert_cmpint( qof_instance_get_editlevel( fixture->inst ), ==, 1 );
+    g_assert( qof_instance_get_dirty_flag( fixture->inst ) == FALSE );
+    g_assert( is_called );
+    
+    /* clean up */
+    qof_book_set_backend( book, NULL );
+    qof_book_destroy( book );
+    qof_backend_destroy( be );
+    g_free( be );
+}
+
 void
 test_suite_qofinstance ( void )
 {
@@ -459,4 +527,5 @@ test_suite_qofinstance ( void )
     GNC_TEST_ADD( suitename, "get set dirty", Fixture, NULL, setup, test_instance_get_set_dirty, teardown );
     GNC_TEST_ADD_FUNC( suitename, "gemini creation and lookup", test_instance_gemini_and_lookup );
     GNC_TEST_ADD( suitename, "display name", Fixture, NULL, setup, test_instance_display_name, teardown );
+    GNC_TEST_ADD( suitename, "begin edit", Fixture, NULL, setup, test_instance_begin_edit, teardown );
 }
