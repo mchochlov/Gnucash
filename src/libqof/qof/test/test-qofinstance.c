@@ -515,6 +515,38 @@ test_instance_begin_edit( Fixture *fixture, gconstpointer pData )
     g_free( be );
 }
 
+static void
+test_instance_commit_edit( Fixture *fixture, gconstpointer pData )
+{
+    gboolean result;
+    
+    g_test_message( "Test when instance set to null" );
+    result = qof_commit_edit( NULL );
+    g_assert( !result );
+    
+    g_test_message( "Test when instance's editlevel >= 2" );
+    qof_instance_increase_editlevel( fixture->inst );
+    qof_instance_increase_editlevel( fixture->inst );
+    g_assert_cmpint( qof_instance_get_editlevel( fixture->inst ), ==, 2 );
+    result = qof_commit_edit( fixture->inst );
+    g_assert_cmpint( qof_instance_get_editlevel( fixture->inst ), ==, 1 );
+    g_assert( !result );
+    
+    g_test_message( "Test when instance's editlevel = 1" );
+    result = qof_commit_edit( fixture->inst );
+    g_assert_cmpint( qof_instance_get_editlevel( fixture->inst ), ==, 0 );
+    g_assert( result );
+    
+    g_test_message( "Test when instance's editlevel < 0" );
+    g_test_log_set_fatal_handler ( ( GTestLogFatalFunc )fatal_handler, NULL );
+    qof_instance_decrease_editlevel( fixture->inst );
+    g_assert_cmpint( qof_instance_get_editlevel( fixture->inst ), ==, -1 );
+    result = qof_commit_edit( fixture->inst );
+    g_assert_cmpint( qof_instance_get_editlevel( fixture->inst ), ==, 0 );
+    g_assert_cmpstr( error_message, ==, "[qof_commit_edit()] unbalanced call - resetting (was -2)" );
+    g_free( error_message );
+}
+
 void
 test_suite_qofinstance ( void )
 {
@@ -528,4 +560,5 @@ test_suite_qofinstance ( void )
     GNC_TEST_ADD_FUNC( suitename, "gemini creation and lookup", test_instance_gemini_and_lookup );
     GNC_TEST_ADD( suitename, "display name", Fixture, NULL, setup, test_instance_display_name, teardown );
     GNC_TEST_ADD( suitename, "begin edit", Fixture, NULL, setup, test_instance_begin_edit, teardown );
+    GNC_TEST_ADD( suitename, "commit edit", Fixture, NULL, setup, test_instance_commit_edit, teardown );
 }
