@@ -716,6 +716,52 @@ test_instance_commit_edit_part2( Fixture *fixture, gconstpointer pData )
 
 /* backend commit test end */
 
+/* object reference tests */
+
+static struct
+{
+    gpointer inst;
+    gpointer ref;
+    
+    gboolean refers_to_object_called;
+} refers_test_struct;
+
+static gboolean
+mock_refers_to_object( const QofInstance* inst, const QofInstance* ref )
+{
+    g_assert( inst );
+    g_assert( ref );
+    g_assert( refers_test_struct.inst == inst );
+    g_assert( refers_test_struct.ref == ref );
+    refers_test_struct.refers_to_object_called = TRUE;
+    return TRUE;
+}
+
+static void
+test_instance_refers_to_object( Fixture *fixture, gconstpointer pData )
+{
+    QofInstance * ref;
+    
+    ref = g_object_new( QOF_TYPE_INSTANCE, NULL );
+    g_assert( fixture->inst );
+    g_assert( ref );
+    g_assert( QOF_INSTANCE_GET_CLASS( fixture->inst )->refers_to_object == NULL );
+    refers_test_struct.refers_to_object_called = FALSE;
+    refers_test_struct.inst = fixture->inst;
+    refers_test_struct.ref = ref;
+    
+    g_test_message( "Test when refers to object not set" );
+    g_assert( !qof_instance_refers_to_object( fixture->inst, ref ) );
+    g_assert( !refers_test_struct.refers_to_object_called );
+    
+    g_test_message( "Test when refers to object set" );
+    QOF_INSTANCE_GET_CLASS( fixture->inst )->refers_to_object = mock_refers_to_object;
+    g_assert( qof_instance_refers_to_object( fixture->inst, ref ) );
+    g_assert( refers_test_struct.refers_to_object_called );
+    
+    g_object_unref( ref );
+}
+
 void
 test_suite_qofinstance ( void )
 {
@@ -731,4 +777,5 @@ test_suite_qofinstance ( void )
     GNC_TEST_ADD( suitename, "begin edit", Fixture, NULL, setup, test_instance_begin_edit, teardown );
     GNC_TEST_ADD( suitename, "commit edit", Fixture, NULL, setup, test_instance_commit_edit, teardown );
     GNC_TEST_ADD( suitename, "commit edit part 2", Fixture, NULL, setup, test_instance_commit_edit_part2, teardown );
+    GNC_TEST_ADD( suitename, "instance refers to object", Fixture, NULL, setup, test_instance_refers_to_object, teardown );
 }
