@@ -123,7 +123,8 @@ static void gnc_plugin_page_owner_tree_cmd_edit_owner (GtkAction *action, GncPlu
 static void gnc_plugin_page_owner_tree_cmd_delete_owner (GtkAction *action, GncPluginPageOwnerTree *page);
 static void gnc_plugin_page_owner_tree_cmd_view_filter_by (GtkAction *action, GncPluginPageOwnerTree *page);
 static void gnc_plugin_page_owner_tree_cmd_new_invoice (GtkAction *action, GncPluginPageOwnerTree *page);
-static void gnc_plugin_page_owner_tree_cmd_listing_report (GtkAction *action, GncPluginPageOwnerTree *plugin_page);
+static void gnc_plugin_page_owner_tree_cmd_owners_report (GtkAction *action, GncPluginPageOwnerTree *plugin_page);
+static void gnc_plugin_page_owner_tree_cmd_owner_report (GtkAction *action, GncPluginPageOwnerTree *plugin_page);
 
 
 static guint plugin_page_signals[LAST_SIGNAL] = { 0 };
@@ -134,19 +135,38 @@ static GtkActionEntry gnc_plugin_page_owner_tree_actions [] =
     /* Toplevel */
     { "FakeToplevel", NULL, "", NULL, NULL, NULL },
 
-    /* File menu */
+    /* Edit menu */
     {
-        "BusinessNewOwnerAction", GNC_STOCK_NEW_ACCOUNT, N_("New _Owner..."), NULL,
-        N_("Create a new Owner"),
+        "OTEditVendorAction", GNC_STOCK_EDIT_ACCOUNT, N_("E_dit Vendor"), "<control>e",
+        N_("Edit the selected vendor"),
+        G_CALLBACK (gnc_plugin_page_owner_tree_cmd_edit_owner)
+    },
+    {
+        "OTEditCustomerAction", GNC_STOCK_EDIT_ACCOUNT, N_("E_dit Customer"), "<control>e",
+        N_("Edit the selected customer"),
+        G_CALLBACK (gnc_plugin_page_owner_tree_cmd_edit_owner)
+    },
+    {
+        "OTEditEmployeeAction", GNC_STOCK_EDIT_ACCOUNT, N_("E_dit Employee"), "<control>e",
+        N_("Edit the selected employee"),
+        G_CALLBACK (gnc_plugin_page_owner_tree_cmd_edit_owner)
+    },
+    {
+        "OTNewVendorAction", GNC_STOCK_NEW_ACCOUNT, N_("_New Vendor..."), NULL,
+        N_("Create a new vendor"),
+        G_CALLBACK (gnc_plugin_page_owner_tree_cmd_new_owner)
+    },
+    {
+        "OTNewCustomerAction", GNC_STOCK_NEW_ACCOUNT, N_("_New Customer..."), NULL,
+        N_("Create a new customer"),
+        G_CALLBACK (gnc_plugin_page_owner_tree_cmd_new_owner)
+    },
+    {
+        "OTNewEmployeeAction", GNC_STOCK_NEW_ACCOUNT, N_("_New Employee..."), NULL,
+        N_("Create a new employee"),
         G_CALLBACK (gnc_plugin_page_owner_tree_cmd_new_owner)
     },
 
-    /* Edit menu */
-    {
-        "EditEditOwnerAction", GNC_STOCK_EDIT_ACCOUNT, N_("Edit _Owner"), "<control>e",
-        N_("Edit the selected owner"),
-        G_CALLBACK (gnc_plugin_page_owner_tree_cmd_edit_owner)
-    },
 /* FIXME disabled due to crash    {
         "EditDeleteOwnerAction", GNC_STOCK_DELETE_ACCOUNT, N_("_Delete Owner..."), "Delete",
         N_("Delete selected owner"),
@@ -161,29 +181,44 @@ static GtkActionEntry gnc_plugin_page_owner_tree_actions [] =
 
     /* Business menu */
     {
-        "BusinessNewBillAction", GNC_STOCK_INVOICE_NEW, N_("New _Bill..."), NULL,
+        "OTNewBillAction", GNC_STOCK_INVOICE_NEW, N_("New _Bill..."), NULL,
         N_("Create a new bill"),
         G_CALLBACK (gnc_plugin_page_owner_tree_cmd_new_invoice)
     },
     {
-        "BusinessNewInvoiceAction", GNC_STOCK_INVOICE_NEW, N_("New _Invoice..."), NULL,
+        "OTNewInvoiceAction", GNC_STOCK_INVOICE_NEW, N_("New _Invoice..."), NULL,
         N_("Create a new invoice"),
         G_CALLBACK (gnc_plugin_page_owner_tree_cmd_new_invoice)
     },
     {
-        "BusinessNewVoucherAction", GNC_STOCK_INVOICE_NEW, N_("New _Voucher..."), NULL,
+        "OTNewVoucherAction", GNC_STOCK_INVOICE_NEW, N_("New _Voucher..."), NULL,
         N_("Create a new voucher"),
         G_CALLBACK (gnc_plugin_page_owner_tree_cmd_new_invoice)
     },
     {
-        "VendorListingReportAction", GTK_STOCK_PRINT_PREVIEW, N_("Vendor Listing"), NULL,
-        N_("Show vendor aging overview"),
-        G_CALLBACK (gnc_plugin_page_owner_tree_cmd_listing_report)
+        "OTVendorListingReportAction", GTK_STOCK_PRINT_PREVIEW, N_("Vendor Listing"), NULL,
+        N_("Show vendor aging overview for all vendors"),
+        G_CALLBACK (gnc_plugin_page_owner_tree_cmd_owners_report)
     },
     {
-        "CustomerListingReportAction", GTK_STOCK_PRINT_PREVIEW, N_("Customer Listing"), NULL,
-        N_("Show customer aging overview"),
-        G_CALLBACK (gnc_plugin_page_owner_tree_cmd_listing_report)
+        "OTCustomerListingReportAction", GTK_STOCK_PRINT_PREVIEW, N_("Customer Listing"), NULL,
+        N_("Show customer aging overview for all customers"),
+        G_CALLBACK (gnc_plugin_page_owner_tree_cmd_owners_report)
+    },
+    {
+        "OTVendorReportAction", NULL, N_("Vendor Report"), NULL,
+        N_("Show vendor report"),
+        G_CALLBACK (gnc_plugin_page_owner_tree_cmd_owner_report)
+    },
+    {
+        "OTCustomerReportAction", NULL, N_("Customer Report"), NULL,
+        N_("Show customer report"),
+        G_CALLBACK (gnc_plugin_page_owner_tree_cmd_owner_report)
+    },
+    {
+        "OTEmployeeReportAction", NULL, N_("Employee Report"), NULL,
+        N_("Show employee report"),
+        G_CALLBACK (gnc_plugin_page_owner_tree_cmd_owner_report)
     },
 };
 /** The number of actions provided by this plugin. */
@@ -194,7 +229,12 @@ static guint gnc_plugin_page_owner_tree_n_actions = G_N_ELEMENTS (gnc_plugin_pag
  *  enabled. */
 static const gchar *actions_requiring_owner[] =
 {
-    "EditEditOwnerAction",
+    "OTEditVendorAction",
+    "OTEditCustomerAction",
+    "OTEditEmployeeAction",
+    "OTVendorReportAction",
+    "OTCustomerReportAction",
+    "OTEmployeeReportAction",
 /* FIXME disabled due to crash    "EditDeleteOwnerAction", */
     NULL
 };
@@ -203,13 +243,17 @@ static const gchar *actions_requiring_owner[] =
 /** Short labels for use on the toolbar buttons. */
 static action_toolbar_labels toolbar_labels[] =
 {
-    { "EditEditOwnerAction",          N_("Edit") },
-    { "BusinessNewOwnerAction",       N_("New") },
-    { "BusinessNewBillAction",        N_("New Bill") },
-    { "BusinessNewInvoiceAction",     N_("New Invoice") },
-    { "BusinessNewVoucherAction",     N_("New Voucher") },
-    { "VendorListingReportAction",    N_("Vendor Listing") },
-    { "CustomerListingReportAction",  N_("Customer Listing") },
+    { "OTEditVendorAction",             N_("Edit") },
+    { "OTEditCustomerAction",           N_("Edit") },
+    { "OTEditEmployeeAction",           N_("Edit") },
+    { "OTNewVendorAction",              N_("New") },
+    { "OTNewCustomerAction",            N_("New") },
+    { "OTNewEmployeeAction",            N_("New") },
+    { "OTNewBillAction",                N_("New Bill") },
+    { "OTNewInvoiceAction",             N_("New Invoice") },
+    { "OTNewVoucherAction",             N_("New Voucher") },
+    { "OTVendorListingReportAction",    N_("Vendor Listing") },
+    { "OTCustomerListingReportAction",  N_("Customer Listing") },
 /* FIXME disable due to crash   { "EditDeleteOwnerAction",   N_("Delete") },*/
     { NULL, NULL },
 };
@@ -227,11 +271,20 @@ typedef struct
 
 static action_owners_struct action_owners[] =
 {
-        { "BusinessNewBillAction",       GNC_OWNER_VENDOR },
-        { "BusinessNewInvoiceAction",    GNC_OWNER_CUSTOMER },
-        { "BusinessNewVoucherAction",    GNC_OWNER_EMPLOYEE },
-        { "VendorListingReportAction",   GNC_OWNER_VENDOR },
-        { "CustomerListingReportAction", GNC_OWNER_CUSTOMER },
+        { "OTEditVendorAction",            GNC_OWNER_VENDOR },
+        { "OTEditCustomerAction",          GNC_OWNER_CUSTOMER },
+        { "OTEditEmployeeAction",          GNC_OWNER_EMPLOYEE },
+        { "OTNewVendorAction",             GNC_OWNER_VENDOR },
+        { "OTNewCustomerAction",           GNC_OWNER_CUSTOMER },
+        { "OTNewEmployeeAction",           GNC_OWNER_EMPLOYEE },
+        { "OTNewBillAction",               GNC_OWNER_VENDOR },
+        { "OTNewInvoiceAction",            GNC_OWNER_CUSTOMER },
+        { "OTNewVoucherAction",            GNC_OWNER_EMPLOYEE },
+        { "OTVendorListingReportAction",   GNC_OWNER_VENDOR },
+        { "OTCustomerListingReportAction", GNC_OWNER_CUSTOMER },
+        { "OTVendorReportAction",          GNC_OWNER_VENDOR },
+        { "OTCustomerReportAction",        GNC_OWNER_CUSTOMER },
+        { "OTEmployeeReportAction",        GNC_OWNER_EMPLOYEE },
         { NULL, GNC_OWNER_NONE },
 };
 
@@ -841,6 +894,45 @@ build_aging_report (GncOwnerType owner_type)
     return scm_num2int (arg, SCM_ARG1, G_STRFUNC);
 }
 
+static int build_owner_report (GncOwner *owner, Account *acc)
+{
+    int id;
+    SCM args;
+    SCM func;
+    SCM arg;
+
+    g_return_val_if_fail (owner, -1);
+
+    args = SCM_EOL;
+
+    func = scm_c_eval_string ("gnc:owner-report-create");
+    g_return_val_if_fail (scm_is_procedure (func), -1);
+
+    if (acc)
+    {
+        swig_type_info * qtype = SWIG_TypeQuery("_p_Account");
+        g_return_val_if_fail (qtype, -1);
+
+        arg = SWIG_NewPointerObj(acc, qtype, 0);
+        g_return_val_if_fail (arg != SCM_UNDEFINED, -1);
+        args = scm_cons (arg, args);
+    }
+    else
+    {
+        args = scm_cons (SCM_BOOL_F, args);
+    }
+
+    arg = SWIG_NewPointerObj(owner, SWIG_TypeQuery("_p__gncOwner"), 0);
+    g_return_val_if_fail (arg != SCM_UNDEFINED, -1);
+    args = scm_cons (arg, args);
+
+    /* Apply the function to the args */
+    arg = scm_apply (func, args, SCM_EOL);
+    g_return_val_if_fail (scm_is_exact (arg), -1);
+    return scm_num2int (arg, SCM_ARG1, G_STRFUNC);
+}
+
+
 /************************************************************/
 /*                     Command callbacks                    */
 /************************************************************/
@@ -1030,22 +1122,48 @@ gnc_plugin_page_owner_tree_cmd_new_invoice (GtkAction *action,
 }
 
 static void
-gnc_plugin_page_owner_tree_cmd_listing_report (GtkAction *action,
+gnc_plugin_page_owner_tree_cmd_owners_report (GtkAction *action,
         GncPluginPageOwnerTree *plugin_page)
 {
     GncPluginPageOwnerTreePrivate *priv;
-    GncMainWindow *window;
     int id;
 
     ENTER("(action %p, plugin_page %p)", action, plugin_page);
 
     g_return_if_fail(GNC_IS_PLUGIN_PAGE_OWNER_TREE(plugin_page));
 
-    window = GNC_MAIN_WINDOW(GNC_PLUGIN_PAGE(plugin_page)->window);
     priv = GNC_PLUGIN_PAGE_OWNER_TREE_GET_PRIVATE(plugin_page);
     id = build_aging_report (priv->owner_type);
     if (id >= 0)
+    {
+        GncMainWindow *window;
+        window = GNC_MAIN_WINDOW(GNC_PLUGIN_PAGE(plugin_page)->window);
         gnc_main_window_open_report(id, window);
+    }
+
+    LEAVE(" ");
+}
+
+static void
+gnc_plugin_page_owner_tree_cmd_owner_report (GtkAction *action,
+        GncPluginPageOwnerTree *plugin_page)
+{
+    GncOwner *current_owner;
+    int id;
+
+    ENTER("(action %p, plugin_page %p)", action, plugin_page);
+
+    g_return_if_fail(GNC_IS_PLUGIN_PAGE_OWNER_TREE(plugin_page));
+
+    current_owner = gnc_plugin_page_owner_tree_get_current_owner (plugin_page);
+    id = build_owner_report (current_owner, NULL);
+    if (id >= 0)
+    {
+        GncMainWindow *window;
+        window = GNC_MAIN_WINDOW(GNC_PLUGIN_PAGE(plugin_page)->window);
+        gnc_main_window_open_report(id, window);
+    }
+
     LEAVE(" ");
 }
 
