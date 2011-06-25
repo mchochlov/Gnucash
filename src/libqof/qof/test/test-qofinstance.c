@@ -839,6 +839,7 @@ test_instance_get_referring_object_list_from_collection( void )
     /* clean up list and destroy book */
     g_list_foreach( inst_list, (GFunc) g_object_unref, NULL );
     g_list_free( inst_list );
+    g_list_free( result );
     qof_book_destroy( book );
     g_object_unref( ref );
 }
