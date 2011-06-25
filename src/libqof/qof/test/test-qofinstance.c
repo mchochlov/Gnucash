@@ -762,6 +762,87 @@ test_instance_refers_to_object( Fixture *fixture, gconstpointer pData )
     g_object_unref( ref );
 }
 
+static struct
+{
+    GList *list;
+    gpointer ref;
+    guint call_count;
+} refers_test_struct_from_col;
+
+static gboolean
+mock_refers_to_object_from_col( const QofInstance* inst, const QofInstance* ref )
+{
+    g_assert( inst );
+    g_assert( ref );
+    g_assert( g_list_find( refers_test_struct_from_col.list, inst ) );
+    g_assert( refers_test_struct_from_col.ref == ref );
+    refers_test_struct_from_col.call_count++;
+    refers_test_struct.refers_to_object_called = TRUE;
+    return TRUE;
+}
+
+static void
+test_instance_get_referring_object_list_from_collection( void )
+{
+    QofIdType type = "test type";
+    QofBook *book;
+    GList *inst_list = NULL;
+    GList *result = NULL;
+    QofCollection *coll;
+    QofInstance *ref;
+    /* randomly init number of entities >=0 and < 10 */
+    gint32 list_length = g_test_rand_int_range( 0, 10 );
+    int i;
+    
+    /* setup book and ref instance */
+    book = qof_book_new();
+    g_assert( book );
+    g_assert( QOF_IS_BOOK( book ) );
+    ref =  g_object_new( QOF_TYPE_INSTANCE, NULL );
+    g_assert( ref );
+    g_assert( QOF_IS_INSTANCE( ref ) );
+    QOF_INSTANCE_GET_CLASS( ref )->refers_to_object = NULL; 
+    refers_test_struct_from_col.call_count = 0;
+    /* init list of entities of one type, 
+     * put them into book collection and
+     * save in the list
+     */
+    for (i = 0; i < list_length; i++ )
+    {
+	QofInstance *inst = g_object_new( QOF_TYPE_INSTANCE, NULL );
+	g_assert( inst );
+	qof_instance_init_data( inst, type, book );
+	inst_list = g_list_append ( inst_list, inst );
+	g_assert_cmpint( g_list_length( inst_list ), ==, (i + 1) );
+    }
+    g_assert_cmpint( list_length, ==, g_list_length( inst_list ) );
+    
+    g_test_message( "Test when refers to object not set" );
+    coll = qof_book_get_collection( book, type );
+    g_assert( coll );
+    result = qof_instance_get_referring_object_list_from_collection( coll, ref );
+    g_assert( !result );
+    g_assert_cmpint( refers_test_struct_from_col.call_count, ==, 0 );
+    
+    g_test_message( "Test when refers to object is set" );
+    QOF_INSTANCE_GET_CLASS( ref )->refers_to_object = mock_refers_to_object_from_col;
+    refers_test_struct_from_col.list = inst_list;
+    refers_test_struct_from_col.ref = ref;
+    result = qof_instance_get_referring_object_list_from_collection( coll, ref );
+    if ( list_length == 0 ) 
+	g_assert( !result );
+    else
+	g_assert( result );
+    g_assert_cmpint( g_list_length( inst_list ), ==, g_list_length( result ) );
+    g_assert_cmpint( g_list_length( inst_list ), ==, refers_test_struct_from_col.call_count );
+    
+    /* clean up list and destroy book */
+    g_list_foreach( inst_list, (GFunc) g_object_unref, NULL );
+    g_list_free( inst_list );
+    qof_book_destroy( book );
+    g_object_unref( ref );
+}
+
 void
 test_suite_qofinstance ( void )
 {
@@ -778,4 +859,5 @@ test_suite_qofinstance ( void )
     GNC_TEST_ADD( suitename, "commit edit", Fixture, NULL, setup, test_instance_commit_edit, teardown );
     GNC_TEST_ADD( suitename, "commit edit part 2", Fixture, NULL, setup, test_instance_commit_edit_part2, teardown );
     GNC_TEST_ADD( suitename, "instance refers to object", Fixture, NULL, setup, test_instance_refers_to_object, teardown );
+    GNC_TEST_ADD_FUNC( suitename, "instance get referring object list from collection", test_instance_get_referring_object_list_from_collection );
 }
