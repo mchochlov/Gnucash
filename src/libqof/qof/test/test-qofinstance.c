@@ -844,6 +844,73 @@ test_instance_get_referring_object_list_from_collection( void )
     g_object_unref( ref );
 }
 
+static struct
+{
+    gpointer inst;
+    gpointer ref;
+    
+    gboolean get_typed_referring_object_list_called;
+} get_typed_referring_object_list_struct;
+
+static GList*
+mock_get_typed_referring_object_list( const QofInstance* inst, const QofInstance* ref )
+{
+    GList* result = NULL;
+    
+    g_assert( inst );
+    g_assert( ref );
+    g_assert( get_typed_referring_object_list_struct.inst == inst );
+    g_assert( get_typed_referring_object_list_struct.ref == ref );
+    get_typed_referring_object_list_struct.get_typed_referring_object_list_called = TRUE;
+    return g_list_append( result, (gpointer) inst );
+}
+
+static void
+test_instance_get_typed_referring_object_list( void )
+{
+    QofInstance *inst;
+    QofInstance *ref;
+    QofBook *book;
+    GList* result = NULL;
+    
+    /* setup */
+    inst = g_object_new( QOF_TYPE_INSTANCE, NULL );
+    ref = g_object_new( QOF_TYPE_INSTANCE, NULL );
+    book = qof_book_new();
+    g_assert( inst );
+    g_assert( ref );
+    g_assert( book );
+    QOF_INSTANCE_GET_CLASS( inst )->refers_to_object = NULL;
+    QOF_INSTANCE_GET_CLASS( inst )->get_typed_referring_object_list = NULL;
+    qof_instance_init_data( inst, "test type", book );
+    get_typed_referring_object_list_struct.get_typed_referring_object_list_called = FALSE;
+    
+    /* 
+     * cases when refers to object is set are not tested in current function
+     * as they are checked in the previous tests
+     */
+    g_test_message( "Test when get typed referring object list is not set" );
+    result = qof_instance_get_typed_referring_object_list( inst, ref );
+    g_assert( !result );
+    g_assert( !get_typed_referring_object_list_struct.get_typed_referring_object_list_called );
+    g_list_free( result );
+    
+    g_test_message( "Test when get typed referring object list is set" );
+    QOF_INSTANCE_GET_CLASS( inst )->get_typed_referring_object_list = mock_get_typed_referring_object_list;
+    get_typed_referring_object_list_struct.inst = inst;
+    get_typed_referring_object_list_struct.ref = ref;
+    result = qof_instance_get_typed_referring_object_list( inst, ref );
+    g_assert( result );
+    g_assert_cmpint( g_list_length( result ), ==, 1 );
+    g_assert( get_typed_referring_object_list_struct.get_typed_referring_object_list_called );
+    g_list_free( result );
+    
+    /* clean */
+    g_object_unref( inst );
+    g_object_unref( ref );
+    qof_book_destroy( book );
+}
+
 void
 test_suite_qofinstance ( void )
 {
@@ -861,4 +928,5 @@ test_suite_qofinstance ( void )
     GNC_TEST_ADD( suitename, "commit edit part 2", Fixture, NULL, setup, test_instance_commit_edit_part2, teardown );
     GNC_TEST_ADD( suitename, "instance refers to object", Fixture, NULL, setup, test_instance_refers_to_object, teardown );
     GNC_TEST_ADD_FUNC( suitename, "instance get referring object list from collection", test_instance_get_referring_object_list_from_collection );
+    GNC_TEST_ADD_FUNC( suitename, "instance get typed referring object list", test_instance_get_typed_referring_object_list);
 }
