@@ -911,6 +911,155 @@ test_instance_get_typed_referring_object_list( void )
     qof_book_destroy( book );
 }
 
+static struct
+{
+    guint refers_to_object_call_count;
+    guint get_typed_referring_object_list_count;
+} get_referring_object_list_struct;
+
+static gboolean
+mock_simple_refers_to_object( const QofInstance* inst, const QofInstance* ref )
+{
+    g_assert( inst );
+    g_assert( ref );
+    if ( inst->e_type == ref->e_type )
+    {
+	get_referring_object_list_struct.refers_to_object_call_count++;
+	return TRUE;
+    }
+    return FALSE;
+}
+
+static GList*
+mock_simple_get_typed_referring_object_list(const QofInstance* inst, const QofInstance* ref)
+{
+    g_assert( inst );
+    g_assert( ref );
+    get_referring_object_list_struct.get_typed_referring_object_list_count++;
+    return qof_instance_get_referring_object_list_from_collection(qof_instance_get_collection(inst), ref);
+}
+
+static void
+test_instance_get_referring_object_list( void )
+{
+    /* walk through the book's each collection's each instance */
+    QofInstance *ref1;
+    QofInstance *ref2;
+    QofBook *book;
+    QofIdType type1 = "type1";
+    QofIdType type2 = "type2";
+    gint32 col1_length = g_test_rand_int_range( 0, 10 );
+    gint32 col2_length = g_test_rand_int_range( 0, 10 );
+    GList* inst_list1 = NULL;
+    GList* inst_list2 = NULL;
+    GList* result = NULL;
+    int i,j;
+    
+    /* setup */
+    book = qof_book_new();
+    g_assert( book );
+    g_assert( QOF_IS_BOOK( book ) );
+    ref1 = g_object_new( QOF_TYPE_INSTANCE, NULL );
+    g_assert( ref1 );
+    ref2 = g_object_new( QOF_TYPE_INSTANCE, NULL );
+    g_assert( ref2 );
+    qof_instance_init_data( ref1, type1, book );
+    qof_instance_init_data( ref2, type2, book );
+    QOF_INSTANCE_GET_CLASS( ref1 )->refers_to_object = NULL;
+    QOF_INSTANCE_GET_CLASS( ref1 )->get_typed_referring_object_list = NULL;
+    g_assert_cmpint( qof_collection_count( qof_book_get_collection( book, type1 ) ), ==, 1 );
+    g_assert_cmpint( qof_collection_count( qof_book_get_collection( book, type2 ) ), ==, 1 );
+    get_referring_object_list_struct.refers_to_object_call_count = 0;
+    get_referring_object_list_struct.get_typed_referring_object_list_count = 0;
+    /*
+     * fill two collections with different types
+     * and random number of elements 
+     */
+    for (i = 0; i < col1_length; i++ )
+    {
+	QofInstance *inst = g_object_new( QOF_TYPE_INSTANCE, NULL );
+	g_assert( inst );
+	qof_instance_init_data( inst, type1, book );
+	inst_list1 = g_list_append ( inst_list1, inst );
+	g_assert_cmpint( g_list_length( inst_list1 ), ==, (i + 1) );
+    }
+    g_assert_cmpint( qof_collection_count( qof_book_get_collection( book, type1 ) ), ==, col1_length + 1 );
+    g_assert_cmpint( g_list_length( inst_list1 ), ==, col1_length );
+    
+    for (j = 0; j < col2_length; j++ )
+    {
+	QofInstance *inst = g_object_new( QOF_TYPE_INSTANCE, NULL );
+	g_assert( inst );
+	qof_instance_init_data( inst, type2, book );
+	inst_list2 = g_list_append ( inst_list2, inst );
+	g_assert_cmpint( g_list_length( inst_list2 ), ==, (j + 1) );
+    }
+    g_assert_cmpint( qof_collection_count( qof_book_get_collection( book, type2 ) ), ==, col2_length + 1 );
+    g_assert_cmpint( g_list_length( inst_list2 ), ==, col2_length );
+    
+    g_test_message( "Test object list returned for ref1 instance by default" );
+    result = qof_instance_get_referring_object_list( ref1 );
+    g_assert( !result );
+    g_assert_cmpint( get_referring_object_list_struct.refers_to_object_call_count, ==, 0 );
+    
+    g_test_message( "Test object list returned for ref2 instance by default" );
+    result = qof_instance_get_referring_object_list( ref2 );
+    g_assert( !result );
+    g_assert_cmpint( get_referring_object_list_struct.refers_to_object_call_count, ==, 0 );
+    
+    /*
+     * refers to object is made simple as it is tested enough
+     * it checks if instance types are equal
+     * that is for ref1 we should get all elements from collection with type1
+     * for ref2 we should get all elements from collection with type2
+     */
+    g_test_message( "Test object list returned for ref1 instance when refers_to_object is set" );
+    QOF_INSTANCE_GET_CLASS( ref1 )->refers_to_object = mock_simple_refers_to_object;
+    result = qof_instance_get_referring_object_list( ref1 );
+    g_assert( result );
+    g_assert_cmpint( g_list_length( result ), ==, col1_length + 1 );
+    g_assert_cmpint( get_referring_object_list_struct.refers_to_object_call_count, ==, col1_length + 1 );
+    g_list_free( result );
+    
+    g_test_message( "Test object list returned for ref2 instance when refers_to_object is set" );
+    get_referring_object_list_struct.refers_to_object_call_count = 0;
+    result = qof_instance_get_referring_object_list( ref2 );
+    g_assert( result );
+    g_assert_cmpint( g_list_length( result ), ==, col2_length + 1 );
+    g_assert_cmpint( get_referring_object_list_struct.refers_to_object_call_count, ==, col2_length + 1 );
+    g_list_free( result );
+    
+    g_test_message( "Test object list returned for ref1 instance when refers_to_object is set and get typed set" );
+    QOF_INSTANCE_GET_CLASS( ref1 )->get_typed_referring_object_list = mock_simple_get_typed_referring_object_list;
+    get_referring_object_list_struct.refers_to_object_call_count = 0;
+    get_referring_object_list_struct.get_typed_referring_object_list_count = 0;
+    result = qof_instance_get_referring_object_list( ref1 );
+    g_assert( result );
+    g_assert_cmpint( g_list_length( result ), ==, col1_length + 1 );
+    g_assert_cmpint( get_referring_object_list_struct.refers_to_object_call_count, ==, col1_length + 1 );
+    g_assert_cmpint( get_referring_object_list_struct.get_typed_referring_object_list_count, ==, 2 );
+    g_list_free( result );
+
+    g_test_message( "Test object list returned for ref2 instance when refers_to_object is set and get typed set" );
+    get_referring_object_list_struct.refers_to_object_call_count = 0;
+    get_referring_object_list_struct.get_typed_referring_object_list_count = 0;
+    result = qof_instance_get_referring_object_list( ref2 );
+    g_assert( result );
+    g_assert_cmpint( g_list_length( result ), ==, col2_length + 1 );
+    g_assert_cmpint( get_referring_object_list_struct.refers_to_object_call_count, ==, col2_length + 1 );
+    g_assert_cmpint( get_referring_object_list_struct.get_typed_referring_object_list_count, ==, 2 );
+    g_list_free( result );
+
+    /* clean */
+    g_object_unref( ref1 );
+    g_object_unref( ref2 );
+    g_list_foreach( inst_list1, (GFunc) g_object_unref, NULL );
+    g_list_foreach( inst_list2, (GFunc) g_object_unref, NULL );
+    g_list_free( inst_list1 );
+    g_list_free( inst_list2 );
+    qof_book_destroy( book );
+}
+
 void
 test_suite_qofinstance ( void )
 {
@@ -929,4 +1078,5 @@ test_suite_qofinstance ( void )
     GNC_TEST_ADD( suitename, "instance refers to object", Fixture, NULL, setup, test_instance_refers_to_object, teardown );
     GNC_TEST_ADD_FUNC( suitename, "instance get referring object list from collection", test_instance_get_referring_object_list_from_collection );
     GNC_TEST_ADD_FUNC( suitename, "instance get typed referring object list", test_instance_get_typed_referring_object_list);
+    GNC_TEST_ADD_FUNC( suitename, "instance get referring object list", test_instance_get_referring_object_list );
 }
