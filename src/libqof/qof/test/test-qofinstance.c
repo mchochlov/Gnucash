@@ -153,8 +153,6 @@ test_instance_new_destroy( void )
     g_assert( g_strrstr( error_message, "assertion `QOF_IS_INSTANCE(ptr)' failed" ) != NULL );
     g_free( error_message );
     
-    g_assert( inst->e_type == NULL );
-    g_assert( inst->kvp_data == NULL );
     g_assert_cmpint( qof_instance_get_editlevel( inst ), ==, 0 );
     g_assert( g_strrstr( error_message, "assertion `QOF_IS_INSTANCE(ptr)' failed" ) != NULL );
     g_free( error_message );
