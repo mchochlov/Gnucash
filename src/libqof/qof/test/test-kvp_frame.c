@@ -77,9 +77,78 @@ test_kvp_frame_new_delete( void )
     guid_free( guid );
 }
 
+static void
+test_kvp_frame_copy( Fixture *fixture, gconstpointer pData )
+{
+    KvpFrame *to_copy = NULL;
+    gint64 test_gint64, copy_gint64;
+    double test_double, copy_double;
+    gnc_numeric test_gnc_numeric, copy_gnc_numeric;
+    Timespec test_ts, copy_ts;
+    const char* test_str, *copy_str;
+    GncGUID *test_guid, *copy_guid;
+    KvpFrame *test_frame, *copy_frame;
+    
+    /* init data in source frame */
+    test_gint64 = 111;
+    test_double = 1.1;
+    test_gnc_numeric = gnc_numeric_zero();
+    test_ts.tv_sec = 1;
+    test_ts.tv_nsec = 1;
+    test_str = "abcdefghijklmnop";
+    test_guid = guid_malloc();
+    guid_new( test_guid );
+    test_frame = kvp_frame_new();
+    
+    g_assert( fixture->frame );
+    kvp_frame_set_gint64( fixture->frame, "gint64-type", test_gint64 );
+    kvp_frame_set_double( fixture->frame, "double-type", test_double );
+    kvp_frame_set_numeric( fixture->frame, "numeric-type", test_gnc_numeric );
+    kvp_frame_set_timespec( fixture->frame, "timespec-type", test_ts );
+    kvp_frame_set_string( fixture->frame, "string-type", test_str );
+    kvp_frame_set_guid( fixture->frame, "guid-type", test_guid );
+    kvp_frame_set_frame( fixture->frame, "frame-type", test_frame );
+    g_assert( !kvp_frame_is_empty( fixture->frame ) );
+    
+    g_test_message( "Test frame copy" );
+    to_copy = kvp_frame_copy( fixture->frame );
+    g_assert( to_copy );
+    g_assert( !kvp_frame_is_empty( to_copy ) );
+    g_assert( to_copy != fixture->frame );
+    g_assert_cmpint( kvp_frame_compare( fixture->frame, to_copy ), ==, 0 );
+    copy_gint64 = kvp_frame_get_gint64( to_copy, "gint64-type" );
+    g_assert( &copy_gint64 != &test_gint64 );
+    g_assert_cmpint( copy_gint64, ==, test_gint64 );
+    copy_double = kvp_frame_get_double( to_copy, "double-type" );
+    g_assert( &copy_double != &test_double );
+    g_assert_cmpfloat( copy_double, ==, test_double );
+    copy_gnc_numeric = kvp_frame_get_numeric( to_copy, "numeric-type" );
+    g_assert( &copy_gnc_numeric != &test_gnc_numeric );
+    g_assert_cmpfloat( copy_gnc_numeric.num, ==, test_gnc_numeric.num );
+    g_assert_cmpfloat( copy_gnc_numeric.denom, ==, test_gnc_numeric.denom );
+    copy_ts = kvp_frame_get_timespec( to_copy, "timespec-type" );
+    g_assert( &copy_ts != &test_ts );
+    g_assert_cmpfloat( copy_ts.tv_sec, ==, test_ts.tv_sec );
+    g_assert_cmpfloat( copy_ts.tv_nsec, ==, test_ts.tv_nsec );
+    copy_str = kvp_frame_get_string( to_copy, "string-type" );
+    g_assert( copy_str != test_str );
+    g_assert_cmpstr( copy_str, ==, test_str );
+    copy_guid = kvp_frame_get_guid( to_copy, "guid-type" );
+    g_assert( copy_guid != test_guid );
+    g_assert( guid_equal( copy_guid, test_guid ) );
+    copy_frame = kvp_frame_get_frame( to_copy, "frame-type");
+    g_assert( copy_frame );
+    g_assert( kvp_frame_is_empty( copy_frame ) );
+    g_assert( copy_frame != test_frame );
+    g_assert_cmpint( kvp_frame_compare( copy_frame, test_frame ), ==, 0 );
+       
+    kvp_frame_delete( to_copy );
+    guid_free( test_guid );
+}
+
 void
 test_suite_kvp_frame( void )
 {
     GNC_TEST_ADD_FUNC( suitename, "kvp frame new and delete", test_kvp_frame_new_delete );
-    //GNC_TEST_ADD( suitename, kvp hash func, Fixture, NULL, test_kvp_hash_func,  teardown );
+    GNC_TEST_ADD( suitename, "kvp frame copy", Fixture, NULL, setup, test_kvp_frame_copy, teardown );
 }
