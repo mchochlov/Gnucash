@@ -146,9 +146,96 @@ test_kvp_frame_copy( Fixture *fixture, gconstpointer pData )
     guid_free( test_guid );
 }
 
+static void
+test_kvp_frame_set_foo( Fixture *fixture, gconstpointer pData )
+{
+    gnc_numeric test_gnc_numeric, copy_gnc_numeric;
+    Timespec test_ts, copy_ts;
+    GncGUID *test_guid, *copy_guid;
+    
+    test_gnc_numeric = gnc_numeric_zero();
+    test_ts.tv_sec = 1;
+    test_ts.tv_nsec = 1;
+    test_guid = guid_malloc();
+    guid_new( test_guid );
+    
+    g_assert( fixture->frame );
+    g_assert( kvp_frame_is_empty( fixture->frame ) );
+  
+    g_test_message( "Test gint64 setup and replace, test frame is created" );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test" ) == NULL );
+    kvp_frame_set_gint64( fixture->frame, "/test/gint64", 1 );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test" ) != NULL );
+    g_assert_cmpint( kvp_frame_get_gint64( fixture->frame, "/test/gint64" ), ==, 1 );
+    kvp_frame_set_gint64( fixture->frame, "/test/gint64", 5 );
+    g_assert_cmpint( kvp_frame_get_gint64( fixture->frame, "/test/gint64" ), ==, 5 );
+    
+    g_test_message( "Test double setup and replace, test2 frame is created" );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test2" ) == NULL );
+    kvp_frame_set_double( fixture->frame, "/test2/double", 1.1 );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test2" ) != NULL );
+    g_assert_cmpfloat( kvp_frame_get_double( fixture->frame, "/test2/double" ), ==, 1.1 );
+    kvp_frame_set_double( fixture->frame, "/test2/double", 5.5 );
+    g_assert_cmpfloat( kvp_frame_get_double( fixture->frame, "/test2/double" ), ==, 5.5 );
+    
+    g_test_message( "Test double setup and replace, test3 frame is created" );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test3" ) == NULL );
+    kvp_frame_set_numeric( fixture->frame, "/test3/numeric", test_gnc_numeric );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test3" ) != NULL );
+    copy_gnc_numeric = kvp_frame_get_numeric( fixture->frame, "/test3/numeric" );
+    g_assert_cmpint( copy_gnc_numeric.num, ==, 0 );
+    g_assert_cmpint( copy_gnc_numeric.denom, ==, 1 );
+    test_gnc_numeric.num = 2;
+    test_gnc_numeric.denom = 3;
+    kvp_frame_set_numeric( fixture->frame, "/test3/numeric", test_gnc_numeric );
+    copy_gnc_numeric = kvp_frame_get_numeric( fixture->frame, "/test3/numeric" );
+    g_assert_cmpint( copy_gnc_numeric.num, ==, 2 );
+    g_assert_cmpint( copy_gnc_numeric.denom, ==, 3 );
+    
+    g_test_message( "Test timespec setup and replace, test4 frame is created" );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test4" ) == NULL );
+    kvp_frame_set_timespec( fixture->frame, "/test4/timespec", test_ts );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test4" ) != NULL );
+    copy_ts = kvp_frame_get_timespec( fixture->frame, "/test4/timespec" );
+    g_assert_cmpint( copy_ts.tv_sec, ==, 1 );
+    g_assert_cmpint( copy_ts.tv_nsec, ==, 1 );
+    test_ts.tv_sec = 7;
+    test_ts.tv_nsec = 13;
+    kvp_frame_set_timespec( fixture->frame, "/test4/timespec", test_ts );
+    copy_ts = kvp_frame_get_timespec( fixture->frame, "/test4/timespec" );
+    g_assert_cmpint( copy_ts.tv_sec, ==, 7 );
+    g_assert_cmpint( copy_ts.tv_nsec, ==, 13 );
+
+    g_test_message( "Test string setup and replace, test5 frame is created" );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test5" ) == NULL );
+    kvp_frame_set_string( fixture->frame, "/test5/string", "one string" );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test5" ) != NULL );
+    g_assert_cmpstr( kvp_frame_get_string( fixture->frame, "/test5/string" ), ==, "one string" );
+    kvp_frame_set_string( fixture->frame, "/test5/string", "another string" );
+    g_assert_cmpstr( kvp_frame_get_string( fixture->frame, "/test5/string" ), ==, "another string" );
+ 
+    g_test_message( "Test guid setup and replace, test6 frame is created" );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test6" ) == NULL );
+    kvp_frame_set_guid( fixture->frame, "/test6/guid", test_guid );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test6" ) != NULL );
+    copy_guid = kvp_frame_get_guid( fixture->frame, "/test6/guid" );
+    g_assert( guid_equal( copy_guid, test_guid ) );
+    kvp_frame_set_guid( fixture->frame, "/test6/guid", guid_null() );
+    copy_guid = kvp_frame_get_guid( fixture->frame, "/test6/guid" );
+    g_assert( guid_equal( copy_guid, guid_null() ) );
+    
+    g_test_message( "Test frame setup and replace, test7 frame is created" );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test7" ) == NULL );
+    kvp_frame_set_frame( fixture->frame, "/test7", kvp_frame_new() );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test7" ) != NULL );
+    kvp_frame_set_frame( fixture->frame, "/test7", NULL );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test7" ) == NULL );
+}
+
 void
 test_suite_kvp_frame( void )
 {
     GNC_TEST_ADD_FUNC( suitename, "kvp frame new and delete", test_kvp_frame_new_delete );
     GNC_TEST_ADD( suitename, "kvp frame copy", Fixture, NULL, setup, test_kvp_frame_copy, teardown );
+    GNC_TEST_ADD( suitename, "kvp frame set foo", Fixture, NULL, setup, test_kvp_frame_set_foo, teardown );
 }
