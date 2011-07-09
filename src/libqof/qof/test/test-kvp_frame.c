@@ -312,6 +312,54 @@ test_kvp_frame_get_slot_path( Fixture *fixture, gconstpointer pData )
     g_assert( !result_value );
 }
 
+static void
+test_kvp_frame_get_slot_path_gslist( Fixture *fixture, gconstpointer pData )
+{
+    /* similar to previous test except path is passed as GSList*/
+    GSList *path_list = NULL;
+    KvpValue *result_value = NULL ;
+  
+    g_assert( fixture->frame );
+    g_assert( kvp_frame_is_empty( fixture->frame ) );
+    
+    g_test_message( "Test with non existing path should return NULL" );
+    path_list = g_slist_append (path_list, "test");
+    path_list = g_slist_append (path_list, "test2");
+    result_value = kvp_frame_get_slot_path_gslist( fixture->frame, path_list->next );
+    g_assert( !result_value );
+    g_slist_free( path_list );
+    
+    g_test_message( "Test with existing value set to current frame" );
+    path_list = g_slist_append (path_list, "test");
+    kvp_frame_set_gint64( fixture->frame, "/test", 1 );
+    result_value = kvp_frame_get_slot_path_gslist( fixture->frame, path_list->next );
+    g_assert( result_value );
+    g_assert( kvp_value_get_type( result_value ) == KVP_TYPE_GINT64 );
+    g_assert_cmpint( kvp_value_get_gint64( result_value ), ==, 1 );
+    
+    g_test_message( "Test should return null as test is not a frame" );
+    path_list = g_slist_append (path_list, "test2");
+    kvp_frame_set_gint64( fixture->frame, "/test/test2", 2 );
+    result_value = kvp_frame_get_slot_path_gslist( fixture->frame, path_list->next );
+    g_assert( !result_value );
+    g_slist_free( path_list );
+    
+    g_test_message( "Test should return last value in the path" );
+    path_list = g_slist_append (path_list, "test2");
+    path_list = g_slist_append (path_list, "test3");
+    kvp_frame_set_gint64( fixture->frame, "/test2/test3", 2 );
+    result_value = kvp_frame_get_slot_path_gslist( fixture->frame, path_list->next );
+    g_assert( result_value );
+    g_assert( kvp_value_get_type( result_value ) == KVP_TYPE_GINT64 );
+    g_assert_cmpint( kvp_value_get_gint64( result_value ), ==, 2 );
+    
+    g_test_message( "Test should return null as last value in the path does not exist" );
+    path_list = g_slist_append (path_list, "test4");
+    result_value = kvp_frame_get_slot_path_gslist( fixture->frame, path_list->next );
+    g_assert( !result_value );
+    g_slist_free( path_list );
+}
+
 void
 test_suite_kvp_frame( void )
 {
@@ -320,4 +368,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD( suitename, "kvp frame set foo", Fixture, NULL, setup, test_kvp_frame_set_foo, teardown );
     GNC_TEST_ADD( suitename, "kvp frame get frame slash", Fixture, NULL, setup, test_kvp_frame_get_frame_slash, teardown );
     GNC_TEST_ADD( suitename, "kvp frame get slot path", Fixture, NULL, setup, test_kvp_frame_get_slot_path, teardown );
+    GNC_TEST_ADD( suitename, "kvp frame get slot path gslist", Fixture, NULL, setup, test_kvp_frame_get_slot_path_gslist, teardown );
 }
