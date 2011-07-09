@@ -276,6 +276,42 @@ test_kvp_frame_get_frame_slash( Fixture *fixture, gconstpointer pData )
     g_assert( result_frame == kvp_frame_get_frame_slash( fixture->frame, "////test3/////test4//////" ) );
 }
 
+static void
+test_kvp_frame_get_slot_path( Fixture *fixture, gconstpointer pData )
+{
+    KvpValue *result_value = NULL ;
+  
+    g_assert( fixture->frame );
+    g_assert( kvp_frame_is_empty( fixture->frame ) );
+    
+    g_test_message( "Test with non existing path should return NULL" );
+    result_value = kvp_frame_get_slot_path( fixture->frame, "test", "test2", NULL );
+    g_assert( !result_value );
+    
+    g_test_message( "Test with existing value set to current frame" );
+    kvp_frame_set_gint64( fixture->frame, "/test", 1 );
+    result_value = kvp_frame_get_slot_path( fixture->frame, "test", NULL );
+    g_assert( result_value );
+    g_assert( kvp_value_get_type( result_value ) == KVP_TYPE_GINT64 );
+    g_assert_cmpint( kvp_value_get_gint64( result_value ), ==, 1 );
+    
+    g_test_message( "Test should return null as test is not a frame" );
+    kvp_frame_set_gint64( fixture->frame, "/test/test2", 2 );
+    result_value = kvp_frame_get_slot_path( fixture->frame, "test", "test2", NULL );
+    g_assert( !result_value );
+    
+    g_test_message( "Test should return last value in the path" );
+    kvp_frame_set_gint64( fixture->frame, "/test2/test3", 2 );
+    result_value = kvp_frame_get_slot_path( fixture->frame, "test2", "test3", NULL );
+    g_assert( result_value );
+    g_assert( kvp_value_get_type( result_value ) == KVP_TYPE_GINT64 );
+    g_assert_cmpint( kvp_value_get_gint64( result_value ), ==, 2 );
+    
+    g_test_message( "Test should return null as last value in the path does not exist" );
+    result_value = kvp_frame_get_slot_path( fixture->frame, "test2", "test3", "test4", NULL );
+    g_assert( !result_value );
+}
+
 void
 test_suite_kvp_frame( void )
 {
@@ -283,4 +319,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD( suitename, "kvp frame copy", Fixture, NULL, setup, test_kvp_frame_copy, teardown );
     GNC_TEST_ADD( suitename, "kvp frame set foo", Fixture, NULL, setup, test_kvp_frame_set_foo, teardown );
     GNC_TEST_ADD( suitename, "kvp frame get frame slash", Fixture, NULL, setup, test_kvp_frame_get_frame_slash, teardown );
+    GNC_TEST_ADD( suitename, "kvp frame get slot path", Fixture, NULL, setup, test_kvp_frame_get_slot_path, teardown );
 }
