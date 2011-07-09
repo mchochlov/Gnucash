@@ -360,6 +360,73 @@ test_kvp_frame_get_slot_path_gslist( Fixture *fixture, gconstpointer pData )
     g_slist_free( path_list );
 }
 
+static void
+test_kvp_frame_add_frame_nc( Fixture *fixture, gconstpointer pData )
+{
+    /* basically we test static function kvp_frame_add_value_nc 
+     * if path not exist it's created
+     * if gslist exist on the path new value added to the list
+     * if any other value exist it's converted to gslist and newvalue added
+     */
+    KvpFrame *test_frame = NULL, 
+	     *test_frame2 = NULL,
+	     *test_frame3 = NULL,
+	     *result_frame = NULL;
+    KvpValue *result_value = NULL;
+    GList *result_list = NULL;
+    
+    g_assert( fixture->frame );
+    g_assert( kvp_frame_is_empty( fixture->frame ) );
+    
+    g_test_message( "Test when path does not exist it is created" );
+    result_frame = kvp_frame_get_frame( fixture->frame, "/test/test2/test3" );
+    g_assert( !result_frame );
+    test_frame = kvp_frame_new();
+    kvp_frame_add_frame_nc( fixture->frame, "/test/test2/test3", test_frame );
+    result_frame = kvp_frame_get_frame( fixture->frame, "/test/test2/test3" );
+    g_assert( result_frame );
+    g_assert( result_frame == test_frame ); /* no copying done */
+    result_frame = kvp_frame_get_frame( fixture->frame, "/test/test2" );
+    g_assert( result_frame != test_frame );
+    result_frame = kvp_frame_get_frame( fixture->frame, "/test" );
+    g_assert( result_frame != test_frame );
+    
+    g_test_message( "Test when value exist on the path it's converted to bag and new value added" );
+    test_frame2 = kvp_frame_new();
+    kvp_frame_add_frame_nc( fixture->frame, "/test/test2/test3", test_frame2 );
+    result_value = kvp_frame_get_value( fixture->frame, "/test/test2/test3" );
+    result_list = kvp_value_get_glist( result_value );
+    g_assert( result_list );
+    g_assert_cmpint( g_list_length( result_list ), ==, 2 );
+    result_value = g_list_first( result_list )->data;
+    g_assert( result_value );
+    g_assert( kvp_value_get_type( result_value ) == KVP_TYPE_FRAME );
+    g_assert( kvp_value_get_frame( result_value ) == test_frame );
+    result_value = g_list_next( result_list )->data;
+    g_assert( result_value );
+    g_assert( kvp_value_get_type( result_value ) == KVP_TYPE_FRAME );
+    g_assert( kvp_value_get_frame( result_value ) == test_frame2 );
+    
+    g_test_message( "Test when bag exists on the path new values are added to it" );
+    test_frame3 = kvp_frame_new();
+    kvp_frame_add_frame_nc( fixture->frame, "/test/test2/test3", test_frame3 );
+    result_value = kvp_frame_get_value( fixture->frame, "/test/test2/test3" );
+    g_assert( result_list == kvp_value_get_glist( result_value ) ); /* same list used */
+    g_assert_cmpint( g_list_length( result_list ), ==, 3 );
+    result_value = g_list_first( result_list )->data;
+    g_assert( result_value );
+    g_assert( kvp_value_get_type( result_value ) == KVP_TYPE_FRAME );
+    g_assert( kvp_value_get_frame( result_value ) == test_frame );
+    result_value = g_list_next( result_list )->data;
+    g_assert( result_value );
+    g_assert( kvp_value_get_type( result_value ) == KVP_TYPE_FRAME );
+    g_assert( kvp_value_get_frame( result_value ) == test_frame2 );
+    result_value = g_list_last( result_list )->data;
+    g_assert( result_value );
+    g_assert( kvp_value_get_type( result_value ) == KVP_TYPE_FRAME );
+    g_assert( kvp_value_get_frame( result_value ) == test_frame3 );
+}
+
 void
 test_suite_kvp_frame( void )
 {
@@ -369,4 +436,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD( suitename, "kvp frame get frame slash", Fixture, NULL, setup, test_kvp_frame_get_frame_slash, teardown );
     GNC_TEST_ADD( suitename, "kvp frame get slot path", Fixture, NULL, setup, test_kvp_frame_get_slot_path, teardown );
     GNC_TEST_ADD( suitename, "kvp frame get slot path gslist", Fixture, NULL, setup, test_kvp_frame_get_slot_path_gslist, teardown );
+    GNC_TEST_ADD( suitename, "kvp frame add frame nc", Fixture, NULL, setup, test_kvp_frame_add_frame_nc, teardown );
 }
