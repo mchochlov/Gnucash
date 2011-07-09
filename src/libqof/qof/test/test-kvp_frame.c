@@ -232,10 +232,55 @@ test_kvp_frame_set_foo( Fixture *fixture, gconstpointer pData )
     g_assert( kvp_frame_get_frame( fixture->frame, "/test7" ) == NULL );
 }
 
+static void
+test_kvp_frame_get_frame_slash( Fixture *fixture, gconstpointer pData )
+{
+    KvpFrame *result_frame = NULL;
+    /* Mostly testing static routine kvp_frmae_get_frame_slash_trash */
+    g_assert( fixture->frame );
+    
+    g_test_message( "Test path with one slash same frame should be returned" );
+    result_frame = kvp_frame_get_frame_slash( fixture->frame, "/" );
+    g_assert( result_frame );
+    g_assert( result_frame == fixture->frame );
+    
+    g_test_message( "Test path with trailing slash same frame should be returned" );
+    result_frame = kvp_frame_get_frame_slash( fixture->frame, "/////" );
+    g_assert( result_frame );
+    g_assert( result_frame == fixture->frame );
+    
+    g_test_message( "Test new frame is created" );
+    result_frame = kvp_frame_get_frame_slash( fixture->frame, "/test" );
+    g_assert( result_frame );
+    g_assert( result_frame != fixture->frame );
+    g_assert( result_frame == kvp_frame_get_frame( fixture->frame, "/test" ) );
+    
+    g_test_message( "Test trailing slashes are ignored and frame created" );
+    result_frame = kvp_frame_get_frame_slash( fixture->frame, "////test2/////" );
+    g_assert( result_frame );
+    g_assert( result_frame != fixture->frame );
+    g_assert( result_frame == kvp_frame_get_frame( fixture->frame, "/test2" ) );
+    g_assert( result_frame != kvp_frame_get_frame( fixture->frame, "/test" ) );
+    
+    g_test_message( "Test frames are created along the path if not exist and last frame is returned" );
+    result_frame = kvp_frame_get_frame_slash( fixture->frame, "////test3/////test4//////" );
+    g_assert( result_frame );
+    g_assert( result_frame != fixture->frame );
+    g_assert( result_frame != kvp_frame_get_frame( fixture->frame, "/test2" ) );
+    g_assert( result_frame != kvp_frame_get_frame( fixture->frame, "/test" ) );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test3" ) != NULL );
+    g_assert( result_frame != kvp_frame_get_frame( fixture->frame, "/test3" ) );
+    g_assert( result_frame == kvp_frame_get_frame( fixture->frame, "/test3/test4" ) );
+    
+    g_test_message( "Test existing frame is returned" );
+    g_assert( result_frame == kvp_frame_get_frame_slash( fixture->frame, "////test3/////test4//////" ) );
+}
+
 void
 test_suite_kvp_frame( void )
 {
     GNC_TEST_ADD_FUNC( suitename, "kvp frame new and delete", test_kvp_frame_new_delete );
     GNC_TEST_ADD( suitename, "kvp frame copy", Fixture, NULL, setup, test_kvp_frame_copy, teardown );
     GNC_TEST_ADD( suitename, "kvp frame set foo", Fixture, NULL, setup, test_kvp_frame_set_foo, teardown );
+    GNC_TEST_ADD( suitename, "kvp frame get frame slash", Fixture, NULL, setup, test_kvp_frame_get_frame_slash, teardown );
 }
