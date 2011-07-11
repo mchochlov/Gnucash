@@ -615,6 +615,100 @@ test_kvp_glist_copy( void )
     kvp_glist_delete( copy_list );
 }
 
+static void
+test_kvp_glist_compare( void )
+{
+    GList *list1 = NULL, *list2 = NULL;
+    
+    KvpValue *gint64_value;
+    KvpValue *double_value;
+    KvpValue *numeric_value;
+    KvpValue *string_value;
+    KvpValue *guid_value;
+    KvpValue *timespec_value;
+    KvpValue *glist_value;
+    KvpValue *frame_value;
+    
+    gnc_numeric gnc_numeric_orig;
+    GncGUID *guid_orig;
+    Timespec ts_orig;
+    GList *list_orig;
+    KvpFrame *frame_orig;
+    
+    gnc_numeric_orig = gnc_numeric_zero();
+    guid_orig = guid_malloc();
+    guid_new( guid_orig );
+    ts_orig.tv_sec = 1;
+    ts_orig.tv_nsec = 1;
+    list_orig = NULL;
+    list_orig = g_list_append( list_orig, kvp_value_new_string( "abcdefghijklmnop" ) );
+    frame_orig = kvp_frame_new();
+    
+    gint64_value = kvp_value_new_gint64( 2 );
+    double_value = kvp_value_new_double( 3.3 );
+    numeric_value = kvp_value_new_gnc_numeric( gnc_numeric_orig );
+    string_value = kvp_value_new_string( "abcdefghijklmnop" );
+    guid_value = kvp_value_new_guid( guid_orig );
+    timespec_value = kvp_value_new_timespec( ts_orig );
+    glist_value = kvp_value_new_glist( list_orig );
+    frame_value = kvp_value_new_frame( frame_orig );
+    
+    /* init list 1 */
+    list1 = g_list_append( list1, gint64_value );
+    list1 = g_list_append( list1, double_value );
+    list1 = g_list_append( list1, numeric_value );
+    list1 = g_list_append( list1, string_value );
+    list1 = g_list_append( list1, guid_value );
+    list1 = g_list_append( list1, timespec_value );
+    list1 = g_list_append( list1, glist_value );
+    list1 = g_list_append( list1, frame_value );
+    g_assert( list1 );
+    g_assert_cmpint( g_list_length( list1 ), ==, 8 );
+    
+    g_test_message( "Test when list is the same" );
+    list2 = list1;
+    g_assert_cmpint( kvp_glist_compare( list1, list2 ), ==, 0 );
+    
+    g_test_message( "Test when list1 is null" );
+    g_assert_cmpint( kvp_glist_compare( NULL, list2 ), ==, -1 );
+
+    g_test_message( "Test when list2 is null" );
+    g_assert_cmpint( kvp_glist_compare( list1, NULL ), ==, 1 );
+    
+    g_test_message( "Copy list and test they are equal" );
+    list2 = kvp_glist_copy( list1 );
+    g_assert( list1 != list2 );
+    g_assert_cmpint( g_list_length( list1 ), ==, g_list_length( list2 ) );
+    g_assert_cmpint( kvp_glist_compare( list1, list2 ), ==, 0 );
+    
+    g_test_message( "Test when list 1 is shorter lists are not equal" );
+    list1 = g_list_remove( list1, frame_value );
+    g_assert_cmpint( g_list_length( list1 ), ==, 7 );
+    g_assert_cmpint( g_list_length( list2 ), ==, 8 );
+    g_assert_cmpint( kvp_glist_compare( list1, list2 ), ==, -1 );
+    
+    g_test_message( "Test when list 2 is shorter lists are not equal" );
+    list1 = g_list_append( list1, frame_value );
+    list1 = g_list_append( list1, frame_value );
+    g_assert_cmpint( g_list_length( list1 ), ==, 9 );
+    g_assert_cmpint( g_list_length( list2 ), ==, 8 );
+    g_assert_cmpint( kvp_glist_compare( list1, list2 ), ==, 1 );
+    
+    g_test_message( "Test when data is not equal lists are not equal" );
+    list1 = g_list_remove( list1, frame_value );
+    g_assert_cmpint( g_list_length( list1 ), ==, g_list_length( list2 ) );
+    g_assert_cmpint( kvp_glist_compare( list1, list2 ), ==, 0 );
+    list1 = g_list_remove( list1, gint64_value );
+    kvp_value_delete( gint64_value );
+    list1 = g_list_prepend( list1, kvp_value_new_gint64( 5 ) );
+    g_assert_cmpint( g_list_length( list1 ), ==, g_list_length( list2 ) );
+    g_assert_cmpint( kvp_glist_compare( list1, list2 ), !=, 0 );
+
+    /* delete lists */
+    kvp_glist_delete( list1 );
+    kvp_glist_delete( list2 );
+}
+
 void
 test_suite_kvp_frame( void )
 {
@@ -627,4 +721,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD( suitename, "kvp frame add frame nc", Fixture, NULL, setup, test_kvp_frame_add_frame_nc, teardown );
     GNC_TEST_ADD_FUNC( suitename, "kvp value copy", test_kvp_value_copy );
     GNC_TEST_ADD_FUNC( suitename, "kvp glist copy", test_kvp_glist_copy );
+    GNC_TEST_ADD_FUNC( suitename, "kvp glist compare", test_kvp_glist_compare );
 }
