@@ -709,6 +709,108 @@ test_kvp_glist_compare( void )
     kvp_glist_delete( list2 );
 }
 
+static void
+test_kvp_value_compare( void )
+{
+    KvpValue *gint64_orig_value, *gint64_copy_value;
+    KvpValue *double_orig_value, *double_copy_value;
+    KvpValue *numeric_orig_value, *numeric_copy_value;
+    KvpValue *string_orig_value, *string_copy_value;
+    KvpValue *guid_orig_value, *guid_copy_value;
+    KvpValue *timespec_orig_value, *timespec_copy_value;
+    KvpValue *glist_orig_value, *glist_copy_value;
+    KvpValue *frame_orig_value, *frame_copy_value;
+    
+    /* data init */
+    gnc_numeric gnc_numeric_orig, gnc_numeric_copy;
+    GncGUID *guid_orig, *guid_copy;
+    Timespec ts_orig, ts_copy;
+    GList *list_orig, *list_copy;
+    KvpFrame *frame_orig, *frame_copy;
+    
+    gnc_numeric_orig = gnc_numeric_zero();
+    gnc_numeric_copy = gnc_numeric_zero();
+    guid_orig = guid_malloc();
+    guid_new( guid_orig );
+    guid_copy = guid_malloc();
+    guid_new( guid_copy );
+    ts_orig.tv_sec = 1;
+    ts_orig.tv_nsec = 1;
+    ts_copy.tv_sec = 2;
+    ts_copy.tv_nsec = 2;
+    list_orig = NULL;
+    list_orig = g_list_append( list_orig, kvp_value_new_string( "abcdefghijklmnop" ) );
+    list_copy = NULL;
+    list_copy = g_list_append( list_copy, kvp_value_new_string( "abcdefg" ) );
+    frame_orig = kvp_frame_new();
+    frame_copy = kvp_frame_new();
+    
+    gint64_orig_value = kvp_value_new_gint64( 2 );
+    gint64_copy_value = kvp_value_new_gint64( 5 );
+    double_orig_value = kvp_value_new_double( 3.3 );
+    double_copy_value = kvp_value_new_double( 3.5 );
+    numeric_orig_value = kvp_value_new_gnc_numeric( gnc_numeric_orig );
+    numeric_copy_value = kvp_value_new_gnc_numeric( gnc_numeric_copy );
+    string_orig_value = kvp_value_new_string( "abcdefghijklmnop" );
+    string_copy_value = kvp_value_new_string( "abcdefghijklmnop" );
+    guid_orig_value = kvp_value_new_guid( guid_orig );
+    guid_copy_value = kvp_value_new_guid( guid_copy );
+    timespec_orig_value = kvp_value_new_timespec( ts_orig );
+    timespec_copy_value = kvp_value_new_timespec( ts_copy );
+    glist_orig_value = kvp_value_new_glist( list_orig );
+    glist_copy_value = kvp_value_new_glist( list_copy );
+    frame_orig_value = kvp_value_new_frame( frame_orig );
+    frame_copy_value = kvp_value_new_frame( frame_copy );
+    
+    g_test_message( "Test the same kvpvalue is equal" );
+    g_assert_cmpint( kvp_value_compare( gint64_orig_value, gint64_orig_value ), ==, 0 );
+    
+    g_test_message( "Test first value is null" );
+    g_assert_cmpint( kvp_value_compare( NULL, gint64_orig_value ), ==, -1 );
+    
+    g_test_message( "Test second value is null" );
+    g_assert_cmpint( kvp_value_compare( gint64_orig_value, NULL ), ==, 1 );
+    
+    g_test_message( "Test diffrent data types first is lesser" );
+    g_assert_cmpint( kvp_value_compare( gint64_orig_value, double_orig_value ), ==, -1 );
+    
+    g_test_message( "Test diffrent data types second is lesser" );
+    g_assert_cmpint( kvp_value_compare( double_orig_value, gint64_orig_value ), ==, 1 );
+    
+    /* testing all different cases of data equality is not the aim
+     * of this test. Rather we check that all data types are being compared.
+     */
+    g_test_message( "Test different kvpvalues of all the types" );
+    g_assert_cmpint( kvp_value_compare( gint64_orig_value, gint64_copy_value ), ==, -1 );
+    g_assert_cmpint( kvp_value_compare( gint64_copy_value, gint64_orig_value ), ==, 1 );
+    g_assert_cmpint( kvp_value_compare( double_orig_value, double_copy_value ), ==, double_compare( 3.3, 3.5 ) );
+    g_assert_cmpint( kvp_value_compare( numeric_orig_value, numeric_copy_value ), ==, gnc_numeric_compare( gnc_numeric_orig, gnc_numeric_copy ) );
+    g_assert_cmpint( kvp_value_compare( string_orig_value, string_copy_value ), ==, strcmp( "abcdefghijklmnop", "abcdefghijklmnop" ) );
+    g_assert_cmpint( kvp_value_compare( guid_orig_value, guid_copy_value ), ==, guid_compare( guid_orig, guid_copy ) );
+    g_assert_cmpint( kvp_value_compare( timespec_orig_value, timespec_copy_value ), ==, timespec_cmp( &ts_orig, &ts_copy ) );
+    g_assert_cmpint( kvp_value_compare( glist_orig_value, glist_copy_value ), ==, kvp_glist_compare( list_orig, list_copy ) );
+    g_assert_cmpint( kvp_value_compare( frame_orig_value, frame_copy_value ), ==, kvp_frame_compare( frame_orig, frame_copy ) );
+    
+    /* destroy objects */
+    kvp_value_delete( gint64_orig_value );
+    kvp_value_delete( double_orig_value );
+    kvp_value_delete( numeric_orig_value );
+    kvp_value_delete( string_orig_value );
+    kvp_value_delete( guid_orig_value );
+    kvp_value_delete( timespec_orig_value );
+    kvp_value_delete( glist_orig_value );
+    kvp_value_delete( frame_orig_value );
+    
+    kvp_value_delete( gint64_copy_value );
+    kvp_value_delete( double_copy_value );
+    kvp_value_delete( numeric_copy_value );
+    kvp_value_delete( string_copy_value );
+    kvp_value_delete( guid_copy_value );
+    kvp_value_delete( timespec_copy_value );
+    kvp_value_delete( glist_copy_value );
+    kvp_value_delete( frame_copy_value );
+}
+
 void
 test_suite_kvp_frame( void )
 {
@@ -722,4 +824,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD_FUNC( suitename, "kvp value copy", test_kvp_value_copy );
     GNC_TEST_ADD_FUNC( suitename, "kvp glist copy", test_kvp_glist_copy );
     GNC_TEST_ADD_FUNC( suitename, "kvp glist compare", test_kvp_glist_compare );
+    GNC_TEST_ADD_FUNC( suitename, "kvp value compare", test_kvp_value_compare );
 }
