@@ -544,6 +544,77 @@ test_kvp_value_copy( void )
     kvp_value_delete( frame_copy_value );
 }
 
+static void
+test_kvp_glist_copy( void )
+{
+    GList *value_list = NULL, *copy_list = NULL, *lp1 = NULL, *lp2 = NULL;
+    KvpValue *gint64_value;
+    KvpValue *double_value;
+    KvpValue *numeric_value;
+    KvpValue *string_value;
+    KvpValue *guid_value;
+    KvpValue *timespec_value;
+    KvpValue *glist_value;
+    KvpValue *frame_value;
+    
+    gnc_numeric gnc_numeric_orig;
+    GncGUID *guid_orig;
+    Timespec ts_orig;
+    GList *list_orig;
+    KvpFrame *frame_orig;
+    
+    gnc_numeric_orig = gnc_numeric_zero();
+    guid_orig = guid_malloc();
+    guid_new( guid_orig );
+    ts_orig.tv_sec = 1;
+    ts_orig.tv_nsec = 1;
+    list_orig = NULL;
+    list_orig = g_list_append( list_orig, kvp_value_new_string( "abcdefghijklmnop" ) );
+    frame_orig = kvp_frame_new();
+    
+    gint64_value = kvp_value_new_gint64( 2 );
+    double_value = kvp_value_new_double( 3.3 );
+    numeric_value = kvp_value_new_gnc_numeric( gnc_numeric_orig );
+    string_value = kvp_value_new_string( "abcdefghijklmnop" );
+    guid_value = kvp_value_new_guid( guid_orig );
+    timespec_value = kvp_value_new_timespec( ts_orig );
+    glist_value = kvp_value_new_glist( list_orig );
+    frame_value = kvp_value_new_frame( frame_orig );
+    
+    value_list = g_list_append( value_list, gint64_value );
+    value_list = g_list_append( value_list, double_value );
+    value_list = g_list_append( value_list, numeric_value );
+    value_list = g_list_append( value_list, string_value );
+    value_list = g_list_append( value_list, guid_value );
+    value_list = g_list_append( value_list, timespec_value );
+    value_list = g_list_append( value_list, glist_value );
+    value_list = g_list_append( value_list, frame_value );
+    g_assert( value_list );
+    g_assert_cmpint( g_list_length( value_list ), ==, 8 );
+    
+    g_test_message( "Test list and all values are copied to new list" );
+    copy_list = kvp_glist_copy( value_list );
+    g_assert( copy_list );
+    g_assert( copy_list != value_list );
+    g_assert_cmpint( g_list_length( copy_list ), ==, 8 );
+    lp1 = value_list;
+    lp2 = copy_list;
+    while (lp1 && lp2)
+    {
+        KvpValue *v1 = (KvpValue *) lp1->data;
+        KvpValue *v2 = (KvpValue *) lp2->data;
+	g_assert( v1 != v2 );
+        g_assert_cmpint( kvp_value_compare(v1, v2), ==, 0 );
+        lp1 = lp1->next;
+        lp2 = lp2->next;
+    }
+    g_assert_cmpint( kvp_glist_compare( value_list, copy_list ), ==, 0 );
+    
+    /* destroy */
+    kvp_glist_delete( value_list );
+    kvp_glist_delete( copy_list );
+}
+
 void
 test_suite_kvp_frame( void )
 {
@@ -555,4 +626,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD( suitename, "kvp frame get slot path gslist", Fixture, NULL, setup, test_kvp_frame_get_slot_path_gslist, teardown );
     GNC_TEST_ADD( suitename, "kvp frame add frame nc", Fixture, NULL, setup, test_kvp_frame_add_frame_nc, teardown );
     GNC_TEST_ADD_FUNC( suitename, "kvp value copy", test_kvp_value_copy );
+    GNC_TEST_ADD_FUNC( suitename, "kvp glist copy", test_kvp_glist_copy );
 }
