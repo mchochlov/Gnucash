@@ -448,7 +448,7 @@ test_kvp_value_copy( void )
     guid_orig = guid_malloc();
     guid_new( guid_orig );
     ts_orig.tv_sec = 1;
-    ts_copy.tv_nsec = 1;
+    ts_orig.tv_nsec = 1;
     list_orig = NULL;
     list_orig = g_list_append( list_orig, kvp_value_new_string( "abcdefghijklmnop" ) );
     frame_orig = kvp_frame_new();
