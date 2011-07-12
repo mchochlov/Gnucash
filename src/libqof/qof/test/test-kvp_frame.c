@@ -811,6 +811,43 @@ test_kvp_value_compare( void )
     kvp_value_delete( frame_copy_value );
 }
 
+static void
+test_kvp_value_new_foo_nc( void )
+{
+    KvpValue *binary_value_nc, *glist_value_nc, *frame_value_nc;
+    void *val;
+    guint64 size;
+    GList *list = NULL;
+    KvpFrame *frame = NULL;
+    
+    g_test_message( "Test new binary values are not copied" );
+    val = g_new0( char, 5 );
+    size = sizeof( val );
+    binary_value_nc = kvp_value_new_binary_nc( val, size );
+    g_assert( binary_value_nc );
+    g_assert( kvp_value_get_type( binary_value_nc ) == KVP_TYPE_BINARY );
+    g_assert( kvp_value_get_binary( binary_value_nc, &size ) == val );
+    
+    g_test_message( "Test new glist is not copied" );
+    list = g_list_append( list, kvp_value_new_gint64( 2 ) );
+    g_assert_cmpint( g_list_length( list ), ==, 1 );
+    glist_value_nc = kvp_value_new_glist_nc( list );
+    g_assert( glist_value_nc );
+    g_assert( kvp_value_get_type( glist_value_nc ) == KVP_TYPE_GLIST );
+    g_assert( kvp_value_get_glist( glist_value_nc ) == list );
+    
+    g_test_message( "Test new frame is not copied" );
+    frame = kvp_frame_new();
+    frame_value_nc = kvp_value_new_frame_nc( frame );
+    g_assert( frame_value_nc );
+    g_assert( kvp_value_get_type( frame_value_nc ) == KVP_TYPE_FRAME );
+    g_assert( kvp_value_get_frame( frame_value_nc ) == frame );
+    
+    kvp_value_delete( binary_value_nc );
+    kvp_value_delete( glist_value_nc );
+    kvp_value_delete( frame_value_nc );
+}
+
 void
 test_suite_kvp_frame( void )
 {
@@ -825,4 +862,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD_FUNC( suitename, "kvp glist copy", test_kvp_glist_copy );
     GNC_TEST_ADD_FUNC( suitename, "kvp glist compare", test_kvp_glist_compare );
     GNC_TEST_ADD_FUNC( suitename, "kvp value compare", test_kvp_value_compare );
+    GNC_TEST_ADD_FUNC( suitename, "kvp value new foo no copy", test_kvp_value_new_foo_nc );
 }
