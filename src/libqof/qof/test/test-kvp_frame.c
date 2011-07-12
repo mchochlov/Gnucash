@@ -918,6 +918,104 @@ test_binary_to_string( void )
     g_free( result );
 }
 
+static void
+test_kvp_value_to_string( void )
+{
+    const gchar *str_tmp;
+    gchar *str_tmp2, *str_tmp3;
+    gchar *result;
+    KvpValue *gint64_value;
+    KvpValue *double_value;
+    KvpValue *numeric_value;
+    KvpValue *string_value;
+    KvpValue *guid_value;
+    KvpValue *timespec_value;
+    KvpValue *glist_value;
+    KvpValue *frame_value;
+    
+    gnc_numeric gnc_numeric_orig;
+    GncGUID *guid_orig;
+    Timespec ts_orig;
+    GList *list_orig;
+    KvpFrame *frame_orig;
+    
+    gnc_numeric_orig = gnc_numeric_zero();
+    guid_orig = guid_malloc();
+    guid_new( guid_orig );
+    ts_orig.tv_sec = 1;
+    ts_orig.tv_nsec = 1;
+    list_orig = NULL;
+    list_orig = g_list_append( list_orig, kvp_value_new_string( "abcdefghijklmnop" ) );
+    frame_orig = kvp_frame_new();
+    
+    gint64_value = kvp_value_new_gint64( 2 );
+    double_value = kvp_value_new_double( 3.3 );
+    numeric_value = kvp_value_new_gnc_numeric( gnc_numeric_orig );
+    string_value = kvp_value_new_string( "abcdefghijklmnop" );
+    guid_value = kvp_value_new_guid( guid_orig );
+    timespec_value = kvp_value_new_timespec( ts_orig );
+    glist_value = kvp_value_new_glist( list_orig );
+    frame_value = kvp_value_new_frame( frame_orig );
+    
+    g_test_message( "Test value string representation with different data types" );
+    result = kvp_value_to_string( gint64_value );
+    g_assert( result );
+    g_assert_cmpstr( result, ==, "KVP_VALUE_GINT64(2)" );
+    g_free( result );
+    
+    result = kvp_value_to_string( double_value );
+    g_assert( result );
+    g_assert_cmpstr( result, ==, "KVP_VALUE_DOUBLE(3.3)" );
+    g_free( result );
+    
+    result = kvp_value_to_string( numeric_value );
+    g_assert( result );
+    g_assert_cmpstr( result, ==, "KVP_VALUE_NUMERIC(0/1)" );
+    g_free( result );
+    
+    result = kvp_value_to_string( string_value );
+    g_assert( result );
+    g_assert_cmpstr( result, ==, "KVP_VALUE_STRING(abcdefghijklmnop)" );
+    g_free( result );
+    
+    result = kvp_value_to_string( guid_value );
+    g_assert( result );
+    str_tmp = guid_to_string( kvp_value_get_guid( guid_value ) );
+    str_tmp2 = g_strdup_printf("KVP_VALUE_GUID(%s)", str_tmp ? str_tmp : "");    
+    g_assert_cmpstr( result, ==, str_tmp2 );
+    g_free( result );
+    g_free( str_tmp2 );
+    
+    result = kvp_value_to_string( timespec_value );
+    g_assert( result );
+    str_tmp2 = g_new0 (char, 40);
+    gnc_timespec_to_iso8601_buff( kvp_value_get_timespec( timespec_value ), str_tmp2 );
+    str_tmp3 = g_strdup_printf("KVP_VALUE_TIMESPEC(%s)", str_tmp2);
+    g_assert_cmpstr( result, ==, str_tmp3 );    
+    g_free( result );
+    g_free( str_tmp2 );
+    g_free( str_tmp3 );
+    
+    result = kvp_value_to_string( glist_value );
+    g_assert( result );
+    g_assert_cmpstr( result, ==, "KVP_VALUE_GLIST([  KVP_VALUE_STRING(abcdefghijklmnop), ])" );
+    g_free( result );
+    
+    result = kvp_value_to_string( frame_value );
+    g_assert( result );
+    g_assert_cmpstr( result, ==, "KVP_VALUE_FRAME({\n}\n)" );
+    g_free( result );
+    
+    kvp_value_delete( gint64_value );
+    kvp_value_delete( double_value );
+    kvp_value_delete( numeric_value );
+    kvp_value_delete( string_value );
+    kvp_value_delete( guid_value );
+    kvp_value_delete( timespec_value );
+    kvp_value_delete( glist_value );
+    kvp_value_delete( frame_value );
+}
+  
 void
 test_suite_kvp_frame( void )
 {
@@ -935,4 +1033,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD_FUNC( suitename, "kvp value new foo no copy", test_kvp_value_new_foo_nc );
     GNC_TEST_ADD( suitename, "kvp frame compare", Fixture, NULL, setup, test_kvp_frame_compare, teardown );
     GNC_TEST_ADD_FUNC( suitename, "binary to string", test_binary_to_string );
+    GNC_TEST_ADD_FUNC( suitename, "kvp value to string", test_kvp_value_to_string );
 }
