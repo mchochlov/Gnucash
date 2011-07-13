@@ -1015,7 +1015,71 @@ test_kvp_value_to_string( void )
     kvp_value_delete( glist_value );
     kvp_value_delete( frame_value );
 }
-  
+
+static void
+test_kvp_frame_to_string( Fixture *fixture, gconstpointer pData )
+{
+    gchar *result;
+    gnc_numeric test_gnc_numeric;
+    GncGUID *test_guid;
+    Timespec test_ts;
+    KvpFrame *test_frame;
+    
+    test_gnc_numeric = gnc_numeric_zero();
+    test_guid = guid_malloc();
+    guid_new( test_guid );
+    test_ts.tv_sec = 1;
+    test_ts.tv_nsec = 1;
+    test_frame = kvp_frame_new();
+    
+    g_assert( fixture->frame );
+    g_assert( kvp_frame_is_empty( fixture->frame ) );
+    
+    g_test_message( "Test empty frame" );
+    result = kvp_frame_to_string( fixture->frame );
+    g_assert_cmpstr( result, ==, "{\n}\n" );
+    g_free( result );
+    
+    /* slots can be randomly distributed in hash table
+     * instead of checking the whole return string we rather check if certain entries exist in it
+     */
+    g_test_message( "Test with all data types and nested frames" );
+    kvp_frame_set_gint64( fixture->frame, "/gint64-type", 2 );
+    result = kvp_frame_to_string( fixture->frame );
+    g_assert( g_strrstr( result, "    gint64-type => KVP_VALUE_GINT64(2),\n" ) != NULL );
+    g_free( result );
+    
+    kvp_frame_set_double( fixture->frame, "/double-type", 3.3 );
+    result = kvp_frame_to_string( fixture->frame );
+    g_assert( g_strrstr( result, "    double-type => KVP_VALUE_DOUBLE(3.3),\n" ) != NULL );
+    g_free( result );
+    
+    kvp_frame_set_numeric( fixture->frame, "/numeric-type", test_gnc_numeric );
+    result = kvp_frame_to_string( fixture->frame );
+    g_assert( g_strrstr( result, "    numeric-type => KVP_VALUE_NUMERIC(0/1),\n" ) != NULL );
+    g_free( result );
+    
+    kvp_frame_set_timespec( fixture->frame, "/timespec-type", test_ts );
+    result = kvp_frame_to_string( fixture->frame );
+    g_assert( g_strrstr( result, "    timespec-type => KVP_VALUE_TIMESPEC" ) != NULL );
+    g_free( result );
+    
+    kvp_frame_set_string( fixture->frame, "/string-type", "abcdefghijklmnop" );
+    result = kvp_frame_to_string( fixture->frame );
+    g_assert( g_strrstr( result, "    string-type => KVP_VALUE_STRING(abcdefghijklmnop),\n" ) != NULL );
+    g_free( result );
+    
+    kvp_frame_set_guid( fixture->frame, "/guid-type", test_guid );
+    result = kvp_frame_to_string( fixture->frame );
+    g_assert( g_strrstr( result, "    guid-type => KVP_VALUE_GUID" ) != NULL );
+    g_free( result );
+    
+    kvp_frame_set_frame( fixture->frame, "/nested/frame-type", test_frame );
+    result = kvp_frame_to_string( fixture->frame );
+    g_assert( g_strrstr( result, "    nested => KVP_VALUE_FRAME({\n    frame-type => KVP_VALUE_FRAME({\n}\n),\n}\n),\n" ) != NULL );
+    g_free( result );
+}
+
 void
 test_suite_kvp_frame( void )
 {
@@ -1034,4 +1098,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD( suitename, "kvp frame compare", Fixture, NULL, setup, test_kvp_frame_compare, teardown );
     GNC_TEST_ADD_FUNC( suitename, "binary to string", test_binary_to_string );
     GNC_TEST_ADD_FUNC( suitename, "kvp value to string", test_kvp_value_to_string );
+    GNC_TEST_ADD( suitename, "kvp frame to string", Fixture, NULL, setup, test_kvp_frame_to_string, teardown );
 }
