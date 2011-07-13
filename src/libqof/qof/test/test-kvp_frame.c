@@ -1192,6 +1192,41 @@ test_kvp_frame_set_slot_path_gslist( Fixture *fixture, gconstpointer pData )
     g_slist_free( path_list );
 }
 
+static void
+test_kvp_frame_replace_slot_nc( Fixture *fixture, gconstpointer pData )
+{
+    GHashTable *frame_hash;
+    KvpValue *orig_value, *orig_value2, *copy_value;
+    /* test indirectly static function kvp_frame_replace_slot_nc */
+    g_assert( fixture->frame );
+    g_assert( kvp_frame_is_empty( fixture->frame ) );
+    
+    g_test_message( "Test when new value is created frame hash init and value stored in hash" );
+    orig_value = kvp_value_new_gint64( 2 );
+    kvp_frame_set_slot( fixture->frame, "test", orig_value );
+    g_assert( !kvp_frame_is_empty( fixture->frame ) );
+    frame_hash = kvp_frame_get_hash( fixture->frame );
+    g_assert( frame_hash );
+    g_assert_cmpint( g_hash_table_size( frame_hash ), ==, 1 );
+    copy_value = g_hash_table_lookup( frame_hash, "test" );
+    g_assert( orig_value != copy_value );
+    g_assert_cmpint( kvp_value_compare( orig_value, copy_value ), ==, 0 );
+    
+    g_test_message( "Test when value is replaced" );
+    orig_value2 = kvp_value_new_gint64( 5 );
+    kvp_frame_set_slot( fixture->frame, "test", orig_value2 );
+    frame_hash = kvp_frame_get_hash( fixture->frame );
+    g_assert( frame_hash );
+    g_assert_cmpint( g_hash_table_size( frame_hash ), ==, 1 );
+    copy_value = g_hash_table_lookup( frame_hash, "test" );
+    g_assert( orig_value2 != copy_value );
+    g_assert_cmpint( kvp_value_compare( orig_value2, copy_value ), ==, 0 );
+    g_assert_cmpint( kvp_value_compare( orig_value, copy_value ), !=, 0 );
+    
+    kvp_value_delete( orig_value );
+    kvp_value_delete( orig_value2 );
+}
+
 void
 test_suite_kvp_frame( void )
 {
@@ -1213,4 +1248,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD( suitename, "kvp frame to string", Fixture, NULL, setup, test_kvp_frame_to_string, teardown );
     GNC_TEST_ADD( suitename, "kvp frame set slot path", Fixture, NULL, setup, test_kvp_frame_set_slot_path, teardown );
     GNC_TEST_ADD( suitename, "kvp frame set slot path gslist", Fixture, NULL, setup, test_kvp_frame_set_slot_path_gslist, teardown );
+    GNC_TEST_ADD( suitename, "kvp frame replace slot nc", Fixture, NULL, setup, test_kvp_frame_replace_slot_nc, teardown );
 }
