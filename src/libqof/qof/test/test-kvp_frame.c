@@ -888,10 +888,10 @@ test_kvp_frame_compare( Fixture *fixture, gconstpointer pData )
     
     g_test_message( "Test when frames have equal number of slots second frame has different data in one slot" );
     kvp_frame_set_string( cmp_frame, "/test/test3", "abcdefg" );
-    g_assert_cmpint( kvp_frame_compare( cmp_frame, fixture->frame ), ==, -1 );
+    g_assert_cmpint( kvp_frame_compare( cmp_frame, fixture->frame ), <, 0 );
     
     g_test_message( "Test when frames have equal number of slots second frame has different data in one slot" );
-    g_assert_cmpint( kvp_frame_compare( fixture->frame, cmp_frame ), ==, 1 );
+    g_assert_cmpint( kvp_frame_compare( fixture->frame, cmp_frame ), >, 0 );
     
     kvp_frame_delete( cmp_frame );
 }
