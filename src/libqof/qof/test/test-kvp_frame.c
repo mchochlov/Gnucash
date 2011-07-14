@@ -1256,6 +1256,80 @@ test_kvp_frame_replace_slot_nc( Fixture *fixture, gconstpointer pData )
     kvp_value_delete( orig_value2 );
 }
 
+static void
+test_get_trailer_make( Fixture *fixture, gconstpointer pData )
+{
+    char *last_key = NULL;
+    KvpValue *frame_value = NULL;
+    KvpFrame *frame = NULL, *frame2 = NULL;
+    
+    g_test_message( "Test null frame and empty string checks" );
+    g_assert( p_get_trailer_make( NULL, "test", &last_key ) == NULL );
+    g_assert( !last_key );
+    g_assert( p_get_trailer_make( fixture->frame, NULL, &last_key ) == NULL );
+    g_assert( !last_key );
+    g_assert( p_get_trailer_make( fixture->frame, "", &last_key ) == NULL );
+    g_assert( !last_key );
+    
+    g_test_message( "Test single frame on the path with no slash" );
+    g_assert( p_get_trailer_make( fixture->frame, "test", &last_key ) == fixture->frame );
+    g_assert_cmpstr( last_key, ==, "test" );
+    
+    g_test_message( "Test single frame on the path with slash" );
+    last_key = NULL;
+    g_assert( p_get_trailer_make( fixture->frame, "/test", &last_key ) == fixture->frame );
+    g_assert_cmpstr( last_key, ==, "test" );
+    
+    g_test_message( "Test path of trailing slash" );
+    last_key = NULL;
+    g_assert( p_get_trailer_make( fixture->frame, "test/", &last_key ) == NULL );
+    g_assert( !last_key );
+    
+    g_test_message( "Test path of two entries: frame for test should be created" );
+    /* test is considered to be last frame on the path
+     * and it is returned. Currently it doesn't exist and will be created
+     * test2 is stripped away and returned as last entry of the path
+     */
+    last_key = NULL;
+    frame = p_get_trailer_make( fixture->frame, "/test/test2", &last_key );
+    g_assert( frame );
+    g_assert( frame != fixture->frame );
+    frame_value = kvp_frame_get_slot( fixture->frame, "test" );
+    g_assert( frame_value );
+    g_assert( kvp_value_get_frame( frame_value ) == frame );
+    frame_value = kvp_frame_get_slot( frame, "test2" );
+    g_assert( !frame_value );
+    g_assert_cmpstr( last_key, ==, "test2" );
+    
+    g_test_message( "Test path of two entries: test frame already exist" );
+    /* here test frame already exist and should be returned
+     */
+    last_key = NULL;
+    g_assert( frame == p_get_trailer_make( fixture->frame, "/test/test2", &last_key ) );
+    g_assert_cmpstr( last_key, ==, "test2" );
+    
+    g_test_message( "Test path of three entries: neither frame exist" );
+    /* test3 and test4 frames will be created. test4 will be created inside test3 frame
+     * while test3 inside fixture->frame. test4 will be returned
+     * test5 stripped away and returned in last_key
+     */
+    last_key = NULL;
+    frame = p_get_trailer_make( fixture->frame, "/test3/test4/test5", &last_key );
+    g_assert( frame );
+    g_assert( frame != fixture->frame );
+    frame_value = kvp_frame_get_slot( fixture->frame, "test3" );
+    g_assert( frame_value );
+    frame2 = kvp_value_get_frame( frame_value );
+    g_assert( frame2 != frame );
+    g_assert( frame2 != fixture->frame );
+    frame_value = kvp_frame_get_slot( frame2, "test4" );
+    g_assert( frame_value );
+    g_assert( kvp_value_get_frame( frame_value ) == frame );
+    frame_value = kvp_frame_get_slot( frame, "test5" );
+    g_assert( !frame_value );
+    g_assert_cmpstr( last_key, ==, "test5" );
+}
+
 void
 test_suite_kvp_frame( void )
 {
@@ -1278,4 +1352,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD( suitename, "kvp frame set slot path", Fixture, NULL, setup, test_kvp_frame_set_slot_path, teardown );
     GNC_TEST_ADD( suitename, "kvp frame set slot path gslist", Fixture, NULL, setup, test_kvp_frame_set_slot_path_gslist, teardown );
     GNC_TEST_ADD( suitename, "kvp frame replace slot nc", Fixture, NULL, setup, test_kvp_frame_replace_slot_nc, teardown );
+    GNC_TEST_ADD( suitename, "get trailer make", Fixture, NULL, setup_static, test_get_trailer_make, teardown_static );
 }
