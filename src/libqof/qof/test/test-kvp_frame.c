@@ -45,6 +45,35 @@ teardown( Fixture *fixture, gconstpointer pData )
     kvp_frame_delete( fixture->frame );
 }
 
+extern KvpFrame* ( *p_get_trailer_make )( KvpFrame *frame, const char *key_path, char **end_key );
+extern gchar* ( *p_kvp_value_glist_to_string )( const GList *list );
+extern KvpFrame* ( *p_get_or_make )( KvpFrame *fr, const char * key );
+extern const KvpFrame* ( *p_kvp_frame_get_frame_or_null_slash_trash )( const KvpFrame *frame, char *key_path );
+extern const KvpFrame* ( *p_get_trailer_or_null )( const KvpFrame * frame, const char * key_path, char **end_key );
+
+extern void init_static_test_pointers( void );
+
+static void
+setup_static( Fixture *fixture, gconstpointer pData )
+{
+    fixture->frame = kvp_frame_new();
+    init_static_test_pointers();
+    g_assert( p_get_trailer_make && p_kvp_value_glist_to_string &&
+	      p_get_or_make && p_kvp_frame_get_frame_or_null_slash_trash &&
+	      p_get_trailer_or_null );
+}
+
+static void
+teardown_static( Fixture *fixture, gconstpointer pData )
+{
+    kvp_frame_delete( fixture->frame );
+    p_get_trailer_make = NULL;
+    p_kvp_value_glist_to_string = NULL;
+    p_get_or_make = NULL;
+    p_kvp_frame_get_frame_or_null_slash_trash = NULL;
+    p_get_trailer_or_null = NULL;
+}
+
 static void
 test_kvp_frame_new_delete( void )
 {
