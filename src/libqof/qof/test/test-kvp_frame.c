@@ -1370,6 +1370,25 @@ test_kvp_value_glist_to_string( Fixture *fixture, gconstpointer pData )
     kvp_glist_delete( value_list );
 }
 
+static void
+test_get_or_make( Fixture *fixture, gconstpointer pData )
+{
+    KvpFrame *test_frame = NULL;
+    
+    g_assert( fixture->frame );
+    g_assert( kvp_frame_is_empty( fixture->frame ) );
+    
+    g_test_message( "Test new frame is created" );
+    test_frame = p_get_or_make( fixture->frame, "test" );
+    g_assert( test_frame );
+    g_assert( test_frame != fixture->frame );
+    g_assert( kvp_frame_get_frame( fixture->frame, "test" ) == test_frame );
+
+    g_test_message( "Test existing frame is returned" );
+    g_assert( test_frame == p_get_or_make( fixture->frame, "test" ) );
+    g_assert( kvp_frame_get_frame( fixture->frame, "test" ) == test_frame );  
+}
+
 void
 test_suite_kvp_frame( void )
 {
@@ -1394,4 +1413,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD( suitename, "kvp frame replace slot nc", Fixture, NULL, setup, test_kvp_frame_replace_slot_nc, teardown );
     GNC_TEST_ADD( suitename, "get trailer make", Fixture, NULL, setup_static, test_get_trailer_make, teardown_static );
     GNC_TEST_ADD( suitename, "kvp value glist to string", Fixture, NULL, setup_static, test_kvp_value_glist_to_string, teardown_static );
+    GNC_TEST_ADD( suitename, "get or make", Fixture, NULL, setup_static, test_get_or_make, teardown_static );
 }
