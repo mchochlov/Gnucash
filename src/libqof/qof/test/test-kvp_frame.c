@@ -1330,6 +1330,46 @@ test_get_trailer_make( Fixture *fixture, gconstpointer pData )
     g_assert_cmpstr( last_key, ==, "test5" );
 }
 
+static void
+test_kvp_value_glist_to_string( Fixture *fixture, gconstpointer pData )
+{
+    /*
+     * kvp_value_glist_to_string and kvp_value_to_string call each other
+     */
+    GList *value_list = NULL;
+    gchar *result;
+    
+    gnc_numeric gnc_numeric_orig;
+    GList *list_orig;
+    KvpFrame *frame_orig;
+    
+    gnc_numeric_orig = gnc_numeric_zero();
+    list_orig = NULL;
+    list_orig = g_list_append( list_orig, kvp_value_new_string( "abcdefghijklmnop" ) );
+    frame_orig = kvp_frame_new();
+        
+    g_test_message( "Test empty list" );
+    result = p_kvp_value_glist_to_string( value_list );
+    g_assert_cmpstr( result, ==, "[  ]" );
+    g_free( result );
+    
+    g_test_message( "Test list with simple and complex values" );
+    value_list = g_list_append( value_list, kvp_value_new_gint64( 2 ) );
+    value_list = g_list_append( value_list, kvp_value_new_double( 3.3 ) );
+    value_list = g_list_append( value_list, kvp_value_new_gnc_numeric( gnc_numeric_orig ) );
+    value_list = g_list_append( value_list, kvp_value_new_string( "abcdefghijklmnop" ) );
+    value_list = g_list_append( value_list, kvp_value_new_glist( list_orig ) );
+    value_list = g_list_append( value_list, kvp_value_new_frame( frame_orig ) );
+    g_assert( value_list );
+    g_assert_cmpint( g_list_length( value_list ), ==, 6 );
+    result = p_kvp_value_glist_to_string( value_list );
+    
+    g_assert_cmpstr( result, ==, "[  KVP_VALUE_GINT64(2), KVP_VALUE_DOUBLE(3.3), KVP_VALUE_NUMERIC(0/1), KVP_VALUE_STRING(abcdefghijklmnop), KVP_VALUE_GLIST([  KVP_VALUE_STRING(abcdefghijklmnop), ]), KVP_VALUE_FRAME({\n}\n), ]" );
+    g_free( result );
+    
+    kvp_glist_delete( value_list );
+}
+
 void
 test_suite_kvp_frame( void )
 {
@@ -1353,4 +1393,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD( suitename, "kvp frame set slot path gslist", Fixture, NULL, setup, test_kvp_frame_set_slot_path_gslist, teardown );
     GNC_TEST_ADD( suitename, "kvp frame replace slot nc", Fixture, NULL, setup, test_kvp_frame_replace_slot_nc, teardown );
     GNC_TEST_ADD( suitename, "get trailer make", Fixture, NULL, setup_static, test_get_trailer_make, teardown_static );
+    GNC_TEST_ADD( suitename, "kvp value glist to string", Fixture, NULL, setup_static, test_kvp_value_glist_to_string, teardown_static );
 }
