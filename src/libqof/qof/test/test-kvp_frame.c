@@ -1412,6 +1412,49 @@ test_kvp_frame_get_frame_or_null_slash_trash( Fixture *fixture, gconstpointer pD
     g_assert( p_kvp_frame_get_frame_or_null_slash_trash( fixture->frame, "/test2" ) != NULL );
 }
 
+static void
+test_get_trailer_or_null( Fixture *fixture, gconstpointer pData )
+{
+    char *last_key = NULL;
+    KvpFrame *frame = NULL;
+    const KvpFrame* frame2 = NULL;
+    
+    g_test_message( "Test null frame and empty string checks" );
+    g_assert( p_get_trailer_or_null( NULL, "test", &last_key ) == NULL );
+    g_assert( !last_key );
+    g_assert( p_get_trailer_or_null( fixture->frame, NULL, &last_key ) == NULL );
+    g_assert( !last_key );
+    g_assert( p_get_trailer_or_null( fixture->frame, "", &last_key ) == NULL );
+    g_assert( !last_key );
+    
+    g_test_message( "Test single frame on the path with no slash" );
+    g_assert( p_get_trailer_or_null( fixture->frame, "test", &last_key ) == fixture->frame );
+    g_assert_cmpstr( last_key, ==, "test" );
+    
+    g_test_message( "Test single frame on the path with slash" );
+    last_key = NULL;
+    g_assert( p_get_trailer_or_null( fixture->frame, "/test", &last_key ) == fixture->frame );
+    g_assert_cmpstr( last_key, ==, "test" );
+    
+    g_test_message( "Test path of trailing slash" );
+    last_key = NULL;
+    g_assert( p_get_trailer_or_null( fixture->frame, "test/", &last_key ) == NULL );
+    g_assert( !last_key );
+    
+    g_test_message( "Test with non existing path" );
+    last_key = NULL;
+    g_assert( p_get_trailer_or_null( fixture->frame, "/test/test2", &last_key ) == NULL );
+    g_assert_cmpstr( last_key, ==, "test2" );
+    
+    g_test_message( "Test with existing path" );
+    last_key = NULL;
+    frame = kvp_frame_new();
+    kvp_frame_set_frame( fixture->frame, "/test/test2", frame );
+    frame2 = p_get_trailer_or_null( fixture->frame, "/test/test2", &last_key );
+    g_assert( kvp_frame_get_frame( fixture->frame, "/test") == frame2 );
+    g_assert_cmpstr( last_key, ==, "test2" );
+}
+
 void
 test_suite_kvp_frame( void )
 {
@@ -1438,4 +1481,5 @@ test_suite_kvp_frame( void )
     GNC_TEST_ADD( suitename, "kvp value glist to string", Fixture, NULL, setup_static, test_kvp_value_glist_to_string, teardown_static );
     GNC_TEST_ADD( suitename, "get or make", Fixture, NULL, setup_static, test_get_or_make, teardown_static );
     GNC_TEST_ADD( suitename, "kvp frame get frame or null slash trash", Fixture, NULL, setup_static, test_kvp_frame_get_frame_or_null_slash_trash, teardown_static );
+    GNC_TEST_ADD( suitename, "get trailer or null", Fixture, NULL, setup_static, test_get_trailer_or_null, teardown_static );
 }
