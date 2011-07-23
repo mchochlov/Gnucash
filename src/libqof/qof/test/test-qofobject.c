@@ -1,5 +1,5 @@
 /********************************************************************
- * testmain.c: GLib g_test test execution file.			    *
+ * test-qofobject.c: GLib g_test test suite for qofobject.c.		    *
  * Copyright 2011 John Ralls <jralls@ceridwen.us>		    *
  *                                                                  *
  * This program is free software; you can redistribute it and/or    *
@@ -18,34 +18,20 @@
  * Free Software Foundation           Voice:  +1-617-542-5942       *
  * 51 Franklin Street, Fifth Floor    Fax:    +1-617-542-2652       *
  * Boston, MA  02110-1301,  USA       gnu@gnu.org                   *
-\********************************************************************/
-
-
+********************************************************************/
 #include "config.h"
+#include <string.h>
 #include <glib.h>
-#include "qof.h"
+#include "test-stuff.h"
+/* Add specific headers for this class */
 
-extern void test_suite_qofbook();
-extern void test_suite_qofinstance();
-extern void test_suite_kvp_frame();
-extern void test_suite_qofobject();
-extern void test_suite_qofsession();
+static const gchar *suitename = "/qof/qofobject";
+void test_suite_qofobject ( void );
 
-int
-main (int   argc,
-      char *argv[])
+
+
+void
+test_suite_qofobject (void)
 {
-    g_type_init(); 			/* Initialize the GObject system */
-    g_test_init ( &argc, &argv, NULL ); 	/* initialize test program */
-    qof_log_init_filename_special("stderr"); /* Init the log system */
-    g_test_bug_base("https://bugzilla.gnome.org/show_bug.cgi?id="); /* init the bugzilla URL */
 
-    test_suite_qofbook();
-    test_suite_qofinstance();
-    test_suite_kvp_frame();
-    test_suite_qofsession();
-
-    return g_test_run( );
 }
-
-
