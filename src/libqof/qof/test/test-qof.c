@@ -43,6 +43,7 @@ main (int   argc,
     test_suite_qofbook();
     test_suite_qofinstance();
     test_suite_kvp_frame();
+    test_suite_qofobject();
     test_suite_qofsession();
 
     return g_test_run( );
