@@ -135,8 +135,23 @@ test_qof_object_register( Fixture *fixture, gconstpointer pData )
     g_free( simple_object );
 }
 
+static void
+test_qof_object_lookup( Fixture *fixture, gconstpointer pData )
+{
+    g_test_message( "Test null check" );
+    g_assert( qof_object_lookup( NULL ) == NULL );
+    
+    g_test_message( "Test existing object lookup" );
+    g_assert( qof_object_register( fixture->qofobject ) == TRUE );
+    g_assert( qof_object_lookup( "my type object" ) == fixture->qofobject );
+    
+    g_test_message( "Test non existing object lookup" );
+    g_assert( qof_object_lookup( "anytype" ) == NULL );
+}
+
 void
 test_suite_qofobject (void)
 {
     GNC_TEST_ADD( suitename, "qof object register", Fixture, NULL, setup, test_qof_object_register, teardown );
+    GNC_TEST_ADD( suitename, "qof object lookup", Fixture, NULL, setup, test_qof_object_lookup, teardown );
 }
