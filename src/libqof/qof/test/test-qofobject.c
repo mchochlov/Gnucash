@@ -149,9 +149,41 @@ test_qof_object_lookup( Fixture *fixture, gconstpointer pData )
     g_assert( qof_object_lookup( "anytype" ) == NULL );
 }
 
+static struct
+{
+  gpointer data1;
+  gpointer data2;
+} be_data;
+
+static void
+test_qof_object_backend_register_lookup( Fixture *fixture, gconstpointer pData )
+{
+    g_test_message( "Test register and lookup null checks" );
+    g_assert( qof_object_register_backend( NULL, "test", &be_data ) == FALSE );
+    g_assert( qof_object_register_backend( "", "test", &be_data ) == FALSE );
+    g_assert( qof_object_register_backend( "test", NULL, &be_data ) == FALSE );
+    g_assert( qof_object_register_backend( "test", "", &be_data ) == FALSE );
+    g_assert( qof_object_register_backend( "test", "test", NULL ) == FALSE );
+    g_assert( qof_object_lookup_backend( NULL, "test" ) == NULL );
+    g_assert( qof_object_lookup_backend( "", "test" ) == NULL );
+    g_assert( qof_object_lookup_backend( "test", NULL ) == NULL );
+    g_assert( qof_object_lookup_backend( "test", "" ) == NULL );
+    
+    g_test_message( "Test new backend and type insert" );
+    g_assert( qof_object_lookup_backend( "type", "backend" ) == NULL );
+    g_assert( qof_object_register_backend( "type", "backend", &be_data.data1 ) == TRUE );
+    g_assert( qof_object_lookup_backend( "type", "backend" ) == &be_data.data1 );
+    
+    g_test_message( "Test type insert into existing backend" );
+    g_assert( qof_object_register_backend( "type2", "backend", &be_data.data2 ) == TRUE );
+    g_assert( qof_object_lookup_backend( "type", "backend" ) == &be_data.data1 );
+    g_assert( qof_object_lookup_backend( "type2", "backend" ) == &be_data.data2 );
+}
+
 void
 test_suite_qofobject (void)
 {
     GNC_TEST_ADD( suitename, "qof object register", Fixture, NULL, setup, test_qof_object_register, teardown );
     GNC_TEST_ADD( suitename, "qof object lookup", Fixture, NULL, setup, test_qof_object_lookup, teardown );
+    GNC_TEST_ADD( suitename, "qof object register and lookup backend", Fixture, NULL, setup, test_qof_object_backend_register_lookup, teardown );
 }
