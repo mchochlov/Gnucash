@@ -180,10 +180,24 @@ test_qof_object_backend_register_lookup( Fixture *fixture, gconstpointer pData )
     g_assert( qof_object_lookup_backend( "type2", "backend" ) == &be_data.data2 );
 }
 
+static void
+test_qof_object_get_type_label( Fixture *fixture, gconstpointer pData )
+{
+    g_assert( qof_object_get_type_label( NULL ) == NULL );
+    
+    g_test_message( "Test with non existing object" );
+    g_assert( qof_object_get_type_label( "anytype" ) == NULL );
+    
+    g_test_message( "Test with existing registered object" );
+    g_assert( qof_object_register( fixture->qofobject ) == TRUE );
+    g_assert_cmpstr( qof_object_get_type_label( "my type object" ), ==, "object desc" );
+}
+
 void
 test_suite_qofobject (void)
 {
     GNC_TEST_ADD( suitename, "qof object register", Fixture, NULL, setup, test_qof_object_register, teardown );
     GNC_TEST_ADD( suitename, "qof object lookup", Fixture, NULL, setup, test_qof_object_lookup, teardown );
     GNC_TEST_ADD( suitename, "qof object register and lookup backend", Fixture, NULL, setup, test_qof_object_backend_register_lookup, teardown );
+    GNC_TEST_ADD( suitename, "qof object get type label", Fixture, NULL, setup, test_qof_object_get_type_label, teardown );
 }
