@@ -34,8 +34,21 @@ typedef struct
     QofObject *qofobject;
 } Fixture;
 
+typedef enum
+{
+    MOCK_OBJECT_BOOK_BEGIN = 1,
+    MOCK_OBJECT_BOOK_END,
+    MOCK_OBJECT_DIRTY,
+    MOCK_OBJECT_MARK_CLEAN,
+    EMPTY
+} MockFields;
+
+static void mock_object_book_begin( QofBook *book );
+static gboolean mock_object_dirty( const QofCollection *col );
+static void mock_object_mark_clean( QofCollection *col );
+
 static QofObject*
-new_object( QofIdType e_type, const char *type_label)
+new_object( QofIdType e_type, const char *type_label, MockFields field)
 {
     QofObject *object = NULL;
     
@@ -44,6 +57,22 @@ new_object( QofIdType e_type, const char *type_label)
     object->interface_version = QOF_OBJECT_VERSION;
     object->e_type = e_type;
     object->type_label = type_label;
+    switch( field )
+    {
+    case MOCK_OBJECT_BOOK_BEGIN:
+	object->book_begin = mock_object_book_begin;
+	break;
+    case MOCK_OBJECT_BOOK_END:
+	object->book_end = mock_object_book_begin;
+	break;
+    case MOCK_OBJECT_DIRTY:
+	object->is_dirty = mock_object_dirty;
+	break;
+    case MOCK_OBJECT_MARK_CLEAN:
+	object->mark_clean = mock_object_mark_clean;
+    case EMPTY:
+	break;
+    }
     return object;
 }
 
@@ -56,7 +85,7 @@ static void
 setup( Fixture *fixture, gconstpointer pData )
 {
     qof_object_initialize();
-    fixture->qofobject = new_object( "my type object", "object desc" );  
+    fixture->qofobject = new_object( "my type object", "object desc", EMPTY );  
 }
 
 static void
@@ -64,6 +93,34 @@ teardown( Fixture *fixture, gconstpointer pData )
 {
     g_free( fixture->qofobject );
     qof_object_shutdown();
+}
+
+/*
+ * Safely generates objects and registers them
+ * 
+ * Input: min_objects - minimum number of objects to be generated (should be between 0 and 5)
+ * 	  mock_filed - function in qofobject to be mocked
+ * Output: number of generated objects
+ */
+static gint32
+generate_and_register_objects( guint min_objects, MockFields mock_field )
+{
+    gint32 list_length = g_test_rand_int_range( min_objects, 5 );
+    const char *types[5] = {"type1", "type2", "type3", "type4", "type5"};
+    int i;
+    
+    g_assert_cmpint( min_objects, >=, 0 );
+    g_assert_cmpint( min_objects, <, 5 );
+    for (i = 0; i < list_length; i++ )
+    {
+	QofObject *object = new_object( types[i], "desc", mock_field );
+	g_assert( object );
+	g_assert( qof_object_register( object ) );
+	g_assert_cmpint( g_list_length( get_object_modules() ), ==, (i + 1) );
+    }
+    g_assert_cmpint( list_length, ==, g_list_length( get_object_modules() ) );
+    
+    return list_length;
 }
 
 /*
