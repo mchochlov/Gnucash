@@ -490,6 +490,38 @@ test_qof_object_new_instance( Fixture *fixture, gconstpointer pData )
     qof_book_destroy( book );
 }
 
+static void
+mock_object_foreach( const QofCollection *col, QofInstanceForeachCB cb, gpointer data)
+{
+}
+
+static void
+test_qof_object_compliance( Fixture *fixture, gconstpointer pData )
+{
+    g_assert( qof_object_register( fixture->qofobject ) );
+    
+    g_test_message( "Test when neither create nor foreach set" );
+    g_assert( qof_object_compliance( fixture->qofobject->e_type, FALSE ) == FALSE );
+    g_assert( qof_object_compliance( fixture->qofobject->e_type, TRUE ) == FALSE );
+    
+    g_test_message( "Test when only create set" );
+    fixture->qofobject->create = mock_object_create;
+    g_assert( qof_object_compliance( fixture->qofobject->e_type, FALSE ) == FALSE );
+    g_assert( qof_object_compliance( fixture->qofobject->e_type, TRUE ) == FALSE );
+    
+    g_test_message( "Test when only foreach set" );
+    fixture->qofobject->create = NULL;
+    fixture->qofobject->foreach = mock_object_foreach;
+    g_assert( qof_object_compliance( fixture->qofobject->e_type, FALSE ) == FALSE );
+    g_assert( qof_object_compliance( fixture->qofobject->e_type, TRUE ) == FALSE );
+    
+    g_test_message( "Test when both set" );
+    fixture->qofobject->create = mock_object_create;
+    fixture->qofobject->foreach = mock_object_foreach;
+    g_assert( qof_object_compliance( fixture->qofobject->e_type, FALSE ) == TRUE );
+    g_assert( qof_object_compliance( fixture->qofobject->e_type, TRUE ) == TRUE );
+}
+
 void
 test_suite_qofobject (void)
 {
@@ -503,4 +535,5 @@ test_suite_qofobject (void)
     GNC_TEST_ADD( suitename, "qof object is dirty", Fixture, NULL, setup, test_qof_object_is_dirty, teardown );
     GNC_TEST_ADD( suitename, "qof object mark clean", Fixture, NULL, setup, test_qof_object_mark_clean, teardown );
     GNC_TEST_ADD( suitename, "qof object new instance", Fixture, NULL, setup, test_qof_object_new_instance, teardown );
+    GNC_TEST_ADD( suitename, "qof object compliance", Fixture, NULL, setup, test_qof_object_compliance, teardown );
 }
