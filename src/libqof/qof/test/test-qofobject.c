@@ -233,6 +233,53 @@ test_qof_object_printable( Fixture *fixture, gconstpointer pData )
     g_assert_cmpstr( qof_object_printable( "my type object", (gpointer)&param ), ==, "printable was called" );
 }
 
+static struct
+{
+    QofBook *book;
+    guint call_count;
+} object_book_begin_struct;
+
+static void
+mock_object_book_begin( QofBook *book )
+{
+    g_assert( book );
+    g_assert( book == object_book_begin_struct.book );
+    object_book_begin_struct.call_count++;
+}
+
+
+static void
+test_qof_object_book_begin( Fixture *fixture, gconstpointer pData )
+{
+    QofBook *book = NULL;
+    gint32 list_length = g_test_rand_int_range( 0, 5 );
+    const char *types[5] = {"type1", "type2", "type3", "type4", "type5"};
+    int i;
+    
+    for (i = 0; i < list_length; i++ )
+    {
+	QofObject *object = new_object( types[i], "desc" );
+	g_assert( object );
+	g_assert( qof_object_register( object ) );
+	object->book_begin = mock_object_book_begin;
+	g_assert_cmpint( g_list_length( get_object_modules() ), ==, (i + 1) );
+    }
+    g_assert_cmpint( list_length, ==, g_list_length( get_object_modules() ) );
+
+    g_test_message( "Test book begin with random objects registered and book begin set up" );
+    g_assert_cmpint( 0, ==, g_list_length( get_book_list() ) );
+    object_book_begin_struct.call_count = 0;
+    book = g_object_new(QOF_TYPE_BOOK, NULL);
+    g_assert( book );
+    object_book_begin_struct.book = book;
+    qof_object_book_begin (book);
+    g_assert_cmpint( 1, ==, g_list_length( get_book_list() ) );
+    g_assert_cmpint( g_list_index( get_book_list(), (gconstpointer) book), !=, -1 );
+    g_assert_cmpint( object_book_begin_struct.call_count, ==, list_length );
+    
+    qof_book_destroy( book );
+}
+
 void
 test_suite_qofobject (void)
 {
@@ -241,4 +288,5 @@ test_suite_qofobject (void)
     GNC_TEST_ADD( suitename, "qof object register and lookup backend", Fixture, NULL, setup, test_qof_object_backend_register_lookup, teardown );
     GNC_TEST_ADD( suitename, "qof object get type label", Fixture, NULL, setup, test_qof_object_get_type_label, teardown );
     GNC_TEST_ADD( suitename, "qof object printable", Fixture, NULL, setup, test_qof_object_printable, teardown );
+    GNC_TEST_ADD( suitename, "qof object book begin", Fixture, NULL, setup, test_qof_object_book_begin, teardown );
 }
