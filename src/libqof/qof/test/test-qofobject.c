@@ -435,6 +435,61 @@ test_qof_object_mark_clean( Fixture *fixture, gconstpointer pData )
     qof_book_destroy( book );
 }
 
+static struct
+{
+    QofBook *book;
+    QofInstance *inst;
+    gboolean is_called;
+} object_create_struct;
+
+static gpointer
+mock_object_create( QofBook *book )
+{
+    QofInstance *inst = NULL;
+    
+    inst = g_object_new(QOF_TYPE_INSTANCE, NULL);
+    g_assert( inst );
+    g_assert( QOF_IS_INSTANCE( inst ) );
+    g_assert( book );
+    g_assert( book == object_create_struct.book );
+    object_create_struct.is_called = TRUE;
+    object_create_struct.inst = inst;
+    return inst;
+}
+
+static void
+test_qof_object_new_instance( Fixture *fixture, gconstpointer pData )
+{
+    QofBook *book = NULL;
+    QofInstance *inst = NULL;
+    
+    book = qof_book_new();
+    g_assert( book );
+    
+    g_test_message( "Test null check" );
+    g_assert( qof_object_new_instance( NULL, book ) == NULL );
+    
+    g_test_message( "Test non existing object type" );
+    g_assert( qof_object_new_instance( "non existing type", book ) == NULL );
+    
+    g_test_message( "Test with registered object type and create not set" );
+    g_assert( qof_object_register( fixture->qofobject ) );
+    g_assert( qof_object_new_instance( fixture->qofobject->e_type, book ) == NULL );
+
+    g_test_message( "Test with registered object type and create set" );
+    object_create_struct.is_called = FALSE;
+    object_create_struct.book = book;
+    object_create_struct.inst = NULL;
+    fixture->qofobject->create = mock_object_create;
+    inst = qof_object_new_instance( fixture->qofobject->e_type, book );
+    g_assert( inst );
+    g_assert( object_create_struct.is_called == TRUE );
+    g_assert( object_create_struct.inst == inst );
+
+    g_object_unref( inst );
+    qof_book_destroy( book );
+}
+
 void
 test_suite_qofobject (void)
 {
@@ -447,4 +502,5 @@ test_suite_qofobject (void)
     GNC_TEST_ADD( suitename, "qof object book end", Fixture, NULL, setup, test_qof_object_book_end, teardown );
     GNC_TEST_ADD( suitename, "qof object is dirty", Fixture, NULL, setup, test_qof_object_is_dirty, teardown );
     GNC_TEST_ADD( suitename, "qof object mark clean", Fixture, NULL, setup, test_qof_object_mark_clean, teardown );
+    GNC_TEST_ADD( suitename, "qof object new instance", Fixture, NULL, setup, test_qof_object_new_instance, teardown );
 }
