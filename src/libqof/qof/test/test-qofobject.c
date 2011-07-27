@@ -47,11 +47,16 @@ new_object( QofIdType e_type, const char *type_label)
     return object;
 }
 
+extern gboolean get_object_is_initialized( void );
+extern GList* get_object_modules( void );
+extern GList* get_book_list( void );
+extern GHashTable* get_backend_data( void );
+
 static void
 setup( Fixture *fixture, gconstpointer pData )
 {
     qof_object_initialize();
-    fixture->qofobject = new_object( "my type object", "object desc" );
+    fixture->qofobject = new_object( "my type object", "object desc" );  
 }
 
 static void
