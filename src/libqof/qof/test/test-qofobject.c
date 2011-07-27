@@ -310,6 +310,67 @@ test_qof_object_book_end( Fixture *fixture, gconstpointer pData )
     g_assert_cmpint( 0, ==, g_list_length( get_book_list() ) );
 }
 
+static struct
+{
+    GList *objects;
+    guint call_count;
+    gboolean result;
+} object_dirty_struct;
+
+static gboolean
+mock_object_dirty( const QofCollection *col )
+{
+    QofObject *obj = NULL;
+    
+    g_assert( col );
+    obj = object_dirty_struct.objects->data;
+    object_dirty_struct.objects = object_dirty_struct.objects->next;
+    g_assert( obj );
+    g_assert_cmpstr( qof_collection_get_type( col ), ==, obj->e_type );
+    object_dirty_struct.call_count++;
+    return object_dirty_struct.result;
+}
+
+static void
+test_qof_object_is_dirty( Fixture *fixture, gconstpointer pData )
+{
+    QofBook *book = NULL;
+    gint32 list_length = g_test_rand_int_range( 1, 5 ); /* need at least one oject for 3rd test */
+    const char *types[5] = {"type1", "type2", "type3", "type4", "type5"};
+    int i;
+    
+    for (i = 0; i < list_length; i++ )
+    {
+	QofObject *object = new_object( types[i], "desc" );
+	g_assert( object );
+	g_assert( qof_object_register( object ) );
+	object->is_dirty = mock_object_dirty;
+	g_assert_cmpint( g_list_length( get_object_modules() ), ==, (i + 1) );
+    }
+    g_assert_cmpint( list_length, ==, g_list_length( get_object_modules() ) );
+
+    g_test_message( "Test null check returns false" );
+    g_assert( qof_object_is_dirty( NULL ) == FALSE );
+    
+    g_test_message( "Test with registered objects and suppose all collections are clean" );
+    book = qof_book_new();
+    g_assert( book );
+    object_dirty_struct.objects = get_object_modules();
+    object_dirty_struct.result = FALSE;
+    object_dirty_struct.call_count = 0;
+    g_assert( qof_object_is_dirty( book ) == FALSE );
+    g_assert_cmpint( object_dirty_struct.call_count, ==, list_length );
+    
+    g_test_message( "Test with registered objects and suppose first collection is dirty" );
+    object_dirty_struct.objects = get_object_modules();
+    object_dirty_struct.result = TRUE;
+    object_dirty_struct.call_count = 0;
+    g_assert( qof_object_is_dirty( book ) == TRUE );
+    g_assert_cmpint( object_dirty_struct.call_count, ==, 1 ); /* should break on first */
+    
+    qof_book_destroy( book );
+}
+
 void
 test_suite_qofobject (void)
 {
@@ -320,4 +381,5 @@ test_suite_qofobject (void)
     GNC_TEST_ADD( suitename, "qof object printable", Fixture, NULL, setup, test_qof_object_printable, teardown );
     GNC_TEST_ADD( suitename, "qof object book begin", Fixture, NULL, setup, test_qof_object_book_begin, teardown );
     GNC_TEST_ADD( suitename, "qof object book end", Fixture, NULL, setup, test_qof_object_book_end, teardown );
+    GNC_TEST_ADD( suitename, "qof object is dirty", Fixture, NULL, setup, test_qof_object_is_dirty, teardown );
 }
