@@ -176,7 +176,7 @@ test_qof_object_register( Fixture *fixture, gconstpointer pData )
     g_assert_cmpint( book_begin_struct.call_count, ==, 0 );
     
     g_test_message( "Test new object register without book_begin specified" );
-    simple_object = new_object( "my type simple", "simple desc" );
+    simple_object = new_object( "my type simple", "simple desc", EMPTY );
     g_assert( qof_object_register( simple_object ) == TRUE );
     g_assert( qof_object_lookup( "my type simple" ) == simple_object );
     g_assert_cmpint( book_begin_struct.call_count, ==, 0 );
@@ -304,25 +304,14 @@ mock_object_book_begin( QofBook *book )
     object_book_begin_struct.call_count++;
 }
 
-
 static void
 test_qof_object_book_begin( Fixture *fixture, gconstpointer pData )
 {
     QofBook *book = NULL;
-    gint32 list_length = g_test_rand_int_range( 0, 5 );
-    const char *types[5] = {"type1", "type2", "type3", "type4", "type5"};
-    int i;
+    gint32 list_length;
     
-    for (i = 0; i < list_length; i++ )
-    {
-	QofObject *object = new_object( types[i], "desc" );
-	g_assert( object );
-	g_assert( qof_object_register( object ) );
-	object->book_begin = mock_object_book_begin;
-	g_assert_cmpint( g_list_length( get_object_modules() ), ==, (i + 1) );
-    }
-    g_assert_cmpint( list_length, ==, g_list_length( get_object_modules() ) );
-
+    list_length = generate_and_register_objects( 0, MOCK_OBJECT_BOOK_BEGIN );
+    
     g_test_message( "Test book begin with random objects registered and book begin set up" );
     g_assert_cmpint( 0, ==, g_list_length( get_book_list() ) );
     object_book_begin_struct.call_count = 0;
@@ -341,20 +330,10 @@ static void
 test_qof_object_book_end( Fixture *fixture, gconstpointer pData )
 {
     QofBook *book = NULL;
-    gint32 list_length = g_test_rand_int_range( 0, 5 );
-    const char *types[5] = {"type1", "type2", "type3", "type4", "type5"};
-    int i;
+    gint32 list_length;    
     
-    for (i = 0; i < list_length; i++ )
-    {
-	QofObject *object = new_object( types[i], "desc" );
-	g_assert( object );
-	g_assert( qof_object_register( object ) );
-	object->book_end = mock_object_book_begin;
-	g_assert_cmpint( g_list_length( get_object_modules() ), ==, (i + 1) );
-    }
-    g_assert_cmpint( list_length, ==, g_list_length( get_object_modules() ) );
-
+    list_length = generate_and_register_objects( 0, MOCK_OBJECT_BOOK_END );
+    
     g_test_message( "Test book end with random objects registered and book end set up" );
     book = qof_book_new();
     g_assert( book );
@@ -392,19 +371,9 @@ static void
 test_qof_object_is_dirty( Fixture *fixture, gconstpointer pData )
 {
     QofBook *book = NULL;
-    gint32 list_length = g_test_rand_int_range( 1, 5 ); /* need at least one oject for 3rd test */
-    const char *types[5] = {"type1", "type2", "type3", "type4", "type5"};
-    int i;
-    
-    for (i = 0; i < list_length; i++ )
-    {
-	QofObject *object = new_object( types[i], "desc" );
-	g_assert( object );
-	g_assert( qof_object_register( object ) );
-	object->is_dirty = mock_object_dirty;
-	g_assert_cmpint( g_list_length( get_object_modules() ), ==, (i + 1) );
-    }
-    g_assert_cmpint( list_length, ==, g_list_length( get_object_modules() ) );
+    gint32 list_length;
+
+    list_length = generate_and_register_objects( 1, MOCK_OBJECT_DIRTY ); /* need at least one oject for 3rd test */
 
     g_test_message( "Test null check returns false" );
     g_assert( qof_object_is_dirty( NULL ) == FALSE );
@@ -451,20 +420,10 @@ static void
 test_qof_object_mark_clean( Fixture *fixture, gconstpointer pData )
 {
     QofBook *book = NULL;
-    gint32 list_length = g_test_rand_int_range( 0, 5 ); /* need at least one oject for 3rd test */
-    const char *types[5] = {"type1", "type2", "type3", "type4", "type5"};
-    int i;
-    
-    for (i = 0; i < list_length; i++ )
-    {
-	QofObject *object = new_object( types[i], "desc" );
-	g_assert( object );
-	g_assert( qof_object_register( object ) );
-	object->mark_clean = mock_object_mark_clean;
-	g_assert_cmpint( g_list_length( get_object_modules() ), ==, (i + 1) );
-    }
-    g_assert_cmpint( list_length, ==, g_list_length( get_object_modules() ) );
+    gint32 list_length;
 
+    list_length = generate_and_register_objects( 0, MOCK_OBJECT_MARK_CLEAN );
+    
     g_test_message( "Test with registered objects and mark clean set up" );
     book = qof_book_new();
     g_assert( book );
