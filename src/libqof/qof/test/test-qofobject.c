@@ -280,6 +280,36 @@ test_qof_object_book_begin( Fixture *fixture, gconstpointer pData )
     qof_book_destroy( book );
 }
 
+static void
+test_qof_object_book_end( Fixture *fixture, gconstpointer pData )
+{
+    QofBook *book = NULL;
+    gint32 list_length = g_test_rand_int_range( 0, 5 );
+    const char *types[5] = {"type1", "type2", "type3", "type4", "type5"};
+    int i;
+    
+    for (i = 0; i < list_length; i++ )
+    {
+	QofObject *object = new_object( types[i], "desc" );
+	g_assert( object );
+	g_assert( qof_object_register( object ) );
+	object->book_end = mock_object_book_begin;
+	g_assert_cmpint( g_list_length( get_object_modules() ), ==, (i + 1) );
+    }
+    g_assert_cmpint( list_length, ==, g_list_length( get_object_modules() ) );
+
+    g_test_message( "Test book end with random objects registered and book end set up" );
+    book = qof_book_new();
+    g_assert( book );
+    object_book_begin_struct.call_count = 0;
+    object_book_begin_struct.book = book;
+    g_assert_cmpint( 1, ==, g_list_length( get_book_list() ) );
+    g_assert_cmpint( g_list_index( get_book_list(), (gconstpointer) book), !=, -1 );
+    qof_book_destroy( book ); /* calls object_book_end */
+    g_assert_cmpint( object_book_begin_struct.call_count, ==, list_length );
+    g_assert_cmpint( 0, ==, g_list_length( get_book_list() ) );
+}
+
 void
 test_suite_qofobject (void)
 {
@@ -289,4 +319,5 @@ test_suite_qofobject (void)
     GNC_TEST_ADD( suitename, "qof object get type label", Fixture, NULL, setup, test_qof_object_get_type_label, teardown );
     GNC_TEST_ADD( suitename, "qof object printable", Fixture, NULL, setup, test_qof_object_printable, teardown );
     GNC_TEST_ADD( suitename, "qof object book begin", Fixture, NULL, setup, test_qof_object_book_begin, teardown );
+    GNC_TEST_ADD( suitename, "qof object book end", Fixture, NULL, setup, test_qof_object_book_end, teardown );
 }
