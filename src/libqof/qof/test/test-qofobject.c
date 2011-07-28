@@ -522,6 +522,40 @@ test_qof_object_compliance( Fixture *fixture, gconstpointer pData )
     g_assert( qof_object_compliance( fixture->qofobject->e_type, TRUE ) == TRUE );
 }
 
+static struct
+{
+    GList *objects;
+    gpointer user_data;
+    guint call_count;
+} foreach_type_cb_struct;
+
+static void
+mock_foreach_type_cb( QofObject *object, gpointer user_data )
+{
+    g_assert( object );
+    g_assert( user_data );
+    g_assert( object == foreach_type_cb_struct.objects->data );
+    g_assert( user_data == foreach_type_cb_struct.user_data );
+    foreach_type_cb_struct.objects = foreach_type_cb_struct.objects->next;
+    foreach_type_cb_struct.call_count++;
+}
+
+static void
+test_qof_object_foreach_type( Fixture *fixture, gconstpointer pData )
+{
+    gint user_data;
+    gint32 list_length;
+
+    list_length = generate_and_register_objects( 0, EMPTY );
+    
+    g_test_message( "Test foreach cb" );
+    foreach_type_cb_struct.objects = get_object_modules();
+    foreach_type_cb_struct.user_data = ( gpointer ) &user_data;
+    foreach_type_cb_struct.call_count = 0;
+    qof_object_foreach_type( mock_foreach_type_cb, ( gpointer ) &user_data );
+    g_assert_cmpint( foreach_type_cb_struct.call_count, ==, list_length );
+}
+
 void
 test_suite_qofobject (void)
 {
@@ -536,4 +570,5 @@ test_suite_qofobject (void)
     GNC_TEST_ADD( suitename, "qof object mark clean", Fixture, NULL, setup, test_qof_object_mark_clean, teardown );
     GNC_TEST_ADD( suitename, "qof object new instance", Fixture, NULL, setup, test_qof_object_new_instance, teardown );
     GNC_TEST_ADD( suitename, "qof object compliance", Fixture, NULL, setup, test_qof_object_compliance, teardown );
+    GNC_TEST_ADD( suitename, "qof object foreach type", Fixture, NULL, setup, test_qof_object_foreach_type, teardown );
 }
