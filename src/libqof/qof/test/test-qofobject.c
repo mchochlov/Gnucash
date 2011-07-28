@@ -556,6 +556,59 @@ test_qof_object_foreach_type( Fixture *fixture, gconstpointer pData )
     g_assert_cmpint( foreach_type_cb_struct.call_count, ==, list_length );
 }
 
+static struct
+{
+    gpointer user_data;
+    QofInstanceForeachCB cb;
+    QofCollection *col;
+    gboolean is_called;
+} foreach_cb_struct;
+
+static void 
+mock_instance_foreach_cb( QofInstance *inst, gpointer user_data )
+{
+}
+
+static void
+mock_foreach( const QofCollection *col, QofInstanceForeachCB cb, gpointer user_data )
+{
+    g_assert( col );
+    g_assert( cb );
+    g_assert( user_data );
+    g_assert( col == foreach_cb_struct.col );
+    g_assert( user_data == foreach_cb_struct.user_data );
+    g_assert( cb == foreach_cb_struct.cb );
+    foreach_cb_struct.is_called = TRUE;
+}
+
+static void
+test_qof_object_foreach( Fixture *fixture, gconstpointer pData )
+{
+    gint user_data;
+    QofBook *book = NULL;
+    QofCollection *col = NULL;
+    
+    /* setup */
+    book = qof_book_new();
+    g_assert( book );    
+    g_assert_cmpint( g_list_length( get_object_modules() ), ==, 0 );
+    qof_object_register( fixture->qofobject );
+    g_assert_cmpint( g_list_length( get_object_modules() ), ==, 1 );
+    col = qof_book_get_collection( book, fixture->qofobject->e_type ); /* make col already exist */
+    g_assert( col );
+
+    g_test_message( "Test foreach and data" );
+    foreach_cb_struct.user_data = ( gpointer ) &user_data;
+    foreach_cb_struct.is_called = FALSE;
+    foreach_cb_struct.col = col;
+    foreach_cb_struct.cb = mock_instance_foreach_cb;
+    fixture->qofobject->foreach = mock_foreach;
+    qof_object_foreach( fixture->qofobject->e_type, book, mock_instance_foreach_cb, ( gpointer ) &user_data );
+    g_assert( foreach_cb_struct.is_called == TRUE );
+    
+    qof_book_destroy( book );
+}
+
 void
 test_suite_qofobject (void)
 {
@@ -571,4 +624,5 @@ test_suite_qofobject (void)
     GNC_TEST_ADD( suitename, "qof object new instance", Fixture, NULL, setup, test_qof_object_new_instance, teardown );
     GNC_TEST_ADD( suitename, "qof object compliance", Fixture, NULL, setup, test_qof_object_compliance, teardown );
     GNC_TEST_ADD( suitename, "qof object foreach type", Fixture, NULL, setup, test_qof_object_foreach_type, teardown );
+    GNC_TEST_ADD( suitename, "qof object foreach", Fixture, NULL, setup, test_qof_object_foreach, teardown );
 }
