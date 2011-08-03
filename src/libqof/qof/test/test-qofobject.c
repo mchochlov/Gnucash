@@ -679,6 +679,44 @@ test_qof_object_foreach_sorted( Fixture *fixture, gconstpointer pData )
     g_list_free( foreach_for_sorted_struct.instances );
 }
 
+static struct
+{
+    QofIdTypeConst type;
+    gpointer backend_data;
+    gpointer user_data;
+    guint call_count;
+} foreach_backend_struct;
+
+static void
+mock_foreach_backend( QofIdTypeConst type, gpointer backend_data, gpointer user_data)
+{
+    g_assert( type );
+    g_assert( backend_data );
+    g_assert( user_data );
+    g_assert_cmpstr( type, ==, foreach_backend_struct.type );
+    g_assert( backend_data == foreach_backend_struct.backend_data );
+    g_assert( user_data == foreach_backend_struct.user_data );
+    foreach_backend_struct.call_count++;
+}
+
+static void
+test_qof_object_foreach_backend( Fixture *fixture, gconstpointer pData )
+{	
+    gint backend_data;
+    gint user_data;
+    
+    g_assert_cmpint( g_hash_table_size( get_backend_data() ), ==, 0 );
+    qof_object_register_backend( "type1", "backend", (gpointer) &backend_data ); /* register backend */
+    g_assert_cmpint( g_hash_table_size( get_backend_data() ), ==, 1 );
+    
+    foreach_backend_struct.call_count = 0;
+    foreach_backend_struct.backend_data = (gpointer) &backend_data;
+    foreach_backend_struct.user_data = (gpointer) &user_data;
+    foreach_backend_struct.type = "type1";
+    qof_object_foreach_backend ( "backend", mock_foreach_backend, (gpointer) &user_data);
+    g_assert_cmpint( foreach_backend_struct.call_count, ==, 1 );
+}
+
 void
 test_suite_qofobject (void)
 {
@@ -696,4 +734,5 @@ test_suite_qofobject (void)
     GNC_TEST_ADD( suitename, "qof object foreach type", Fixture, NULL, setup, test_qof_object_foreach_type, teardown );
     GNC_TEST_ADD( suitename, "qof object foreach", Fixture, NULL, setup, test_qof_object_foreach, teardown );
     GNC_TEST_ADD( suitename, "qof object foreach sorted", Fixture, NULL, setup, test_qof_object_foreach_sorted, teardown );
+    GNC_TEST_ADD( suitename, "qof object foreach backend", Fixture, NULL, setup, test_qof_object_foreach_backend, teardown );
 }
