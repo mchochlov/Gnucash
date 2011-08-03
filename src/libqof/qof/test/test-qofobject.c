@@ -609,6 +609,76 @@ test_qof_object_foreach( Fixture *fixture, gconstpointer pData )
     qof_book_destroy( book );
 }
 
+static struct
+{
+    GList *instances;
+    gpointer user_data;
+    guint call_count;
+} foreach_for_sorted_struct;
+
+static void
+mock_foreach_for_sorted( const QofCollection *col, QofInstanceForeachCB cb, gpointer user_data )
+{
+    GList *iter;
+    
+    g_assert( col );
+    g_assert( cb );
+    g_assert( user_data );
+    
+    for (iter = foreach_for_sorted_struct.instances; iter; iter = iter->next)
+    {
+        cb( iter->data, user_data );
+    }
+}
+
+static void 
+mock_instance_foreach_cb_for_sorted( QofInstance *inst, gpointer user_data )
+{
+    g_assert( inst );
+    g_assert( user_data );
+    g_assert_cmpint( g_list_index( foreach_for_sorted_struct.instances, (gconstpointer) inst ), !=, -1 );
+    g_assert( user_data == foreach_for_sorted_struct.user_data );
+    foreach_for_sorted_struct.call_count++;
+}
+
+static void
+test_qof_object_foreach_sorted( Fixture *fixture, gconstpointer pData )
+{
+    int i;
+    gint32 list_length = g_test_rand_int_range( 0, 5 );
+    gint user_data;
+    QofBook *book = NULL;
+    QofCollection *col = NULL;
+    foreach_for_sorted_struct.instances = NULL;
+    
+    /* setup */
+    book = qof_book_new();
+    g_assert( book );    
+    g_assert_cmpint( g_list_length( get_object_modules() ), ==, 0 );
+    qof_object_register( fixture->qofobject );
+    g_assert_cmpint( g_list_length( get_object_modules() ), ==, 1 );
+
+    fixture->qofobject->foreach = mock_foreach_for_sorted;
+    /* init instances */
+    col = qof_book_get_collection( book, fixture->qofobject->e_type );
+    for (i = 0; i < list_length; i++ )
+    {
+	QofInstance * inst = g_object_new( QOF_TYPE_INSTANCE, NULL );
+	g_assert( QOF_IS_INSTANCE( inst ) );
+	foreach_for_sorted_struct.instances = g_list_append( foreach_for_sorted_struct.instances, inst );
+	qof_collection_insert_entity( col, inst );
+    }
+    g_assert_cmpint( list_length, ==, g_list_length( foreach_for_sorted_struct.instances ) );    
+    
+    foreach_for_sorted_struct.call_count = 0;
+    foreach_for_sorted_struct.user_data = &user_data;
+    qof_object_foreach_sorted( fixture->qofobject->e_type, book, mock_instance_foreach_cb_for_sorted, ( gpointer ) &user_data );
+    g_assert_cmpint( list_length, ==, foreach_for_sorted_struct.call_count );
+    
+    qof_book_destroy( book );
+    g_list_free( foreach_for_sorted_struct.instances );
+}
+
 void
 test_suite_qofobject (void)
 {
@@ -625,4 +695,5 @@ test_suite_qofobject (void)
     GNC_TEST_ADD( suitename, "qof object compliance", Fixture, NULL, setup, test_qof_object_compliance, teardown );
     GNC_TEST_ADD( suitename, "qof object foreach type", Fixture, NULL, setup, test_qof_object_foreach_type, teardown );
     GNC_TEST_ADD( suitename, "qof object foreach", Fixture, NULL, setup, test_qof_object_foreach, teardown );
+    GNC_TEST_ADD( suitename, "qof object foreach sorted", Fixture, NULL, setup, test_qof_object_foreach_sorted, teardown );
 }
