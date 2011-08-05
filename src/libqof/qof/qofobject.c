@@ -43,10 +43,10 @@ static GHashTable *backend_data = NULL;
  * They should be removed when no longer needed
  */
 
-extern gboolean get_object_is_initialized( void );
-extern GList* get_object_modules( void );
-extern GList* get_book_list( void );
-extern GHashTable* get_backend_data( void );
+gboolean get_object_is_initialized( void );
+GList* get_object_modules( void );
+GList* get_book_list( void );
+GHashTable* get_backend_data( void );
 
 gboolean
 get_object_is_initialized( void ) { return object_is_initialized; }
