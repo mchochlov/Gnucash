@@ -307,41 +307,61 @@ mock_object_book_begin( QofBook *book )
 static void
 test_qof_object_book_begin( Fixture *fixture, gconstpointer pData )
 {
-    QofBook *book = NULL;
+    QofBook *book = NULL, *book2 = NULL;
     gint32 list_length;
     
-    list_length = generate_and_register_objects( 0, MOCK_OBJECT_BOOK_BEGIN );
-    
-    g_test_message( "Test book begin with random objects registered and book begin set up" );
+    g_test_message( "Test book begin with no objects" );
     g_assert_cmpint( 0, ==, g_list_length( get_book_list() ) );
     object_book_begin_struct.call_count = 0;
     book = g_object_new(QOF_TYPE_BOOK, NULL);
     g_assert( book );
-    object_book_begin_struct.book = book;
-    qof_object_book_begin (book);
+    qof_object_book_begin( book );
     g_assert_cmpint( 1, ==, g_list_length( get_book_list() ) );
     g_assert_cmpint( g_list_index( get_book_list(), (gconstpointer) book), !=, -1 );
-    g_assert_cmpint( object_book_begin_struct.call_count, ==, list_length );
+    g_assert_cmpint( object_book_begin_struct.call_count, ==, 0 );
     
     qof_book_destroy( book );
+    
+    list_length = generate_and_register_objects( 1, MOCK_OBJECT_BOOK_BEGIN );
+    
+    g_test_message( "Test book begin with random objects registered and book begin set up" );
+    g_assert_cmpint( 0, ==, g_list_length( get_book_list() ) );
+    book2 = g_object_new(QOF_TYPE_BOOK, NULL);
+    g_assert( book2 );
+    object_book_begin_struct.book = book2;
+    qof_object_book_begin( book2 );
+    g_assert_cmpint( 1, ==, g_list_length( get_book_list() ) );
+    g_assert_cmpint( g_list_index( get_book_list(), (gconstpointer) book2 ), !=, -1 );
+    g_assert_cmpint( object_book_begin_struct.call_count, ==, list_length );
+    
+    qof_book_destroy( book2 );
 }
 
 static void
 test_qof_object_book_end( Fixture *fixture, gconstpointer pData )
 {
-    QofBook *book = NULL;
+    QofBook *book = NULL, *book2 = NULL;
     gint32 list_length;    
     
-    list_length = generate_and_register_objects( 0, MOCK_OBJECT_BOOK_END );
-    
-    g_test_message( "Test book end with random objects registered and book end set up" );
+    g_test_message( "Test book with no objects" );
     book = qof_book_new();
     g_assert( book );
     object_book_begin_struct.call_count = 0;
-    object_book_begin_struct.book = book;
     g_assert_cmpint( 1, ==, g_list_length( get_book_list() ) );
     g_assert_cmpint( g_list_index( get_book_list(), (gconstpointer) book), !=, -1 );
     qof_book_destroy( book ); /* calls object_book_end */
+    g_assert_cmpint( object_book_begin_struct.call_count, ==, 0 );
+    g_assert_cmpint( 0, ==, g_list_length( get_book_list() ) );
+    
+    list_length = generate_and_register_objects( 1, MOCK_OBJECT_BOOK_END );
+    
+    g_test_message( "Test book end with random objects registered and book end set up" );
+    book2 = qof_book_new();
+    g_assert( book2 );
+    object_book_begin_struct.book = book2;
+    g_assert_cmpint( 1, ==, g_list_length( get_book_list() ) );
+    g_assert_cmpint( g_list_index( get_book_list(), (gconstpointer) book2 ), !=, -1 );
+    qof_book_destroy( book2 ); /* calls object_book_end */
     g_assert_cmpint( object_book_begin_struct.call_count, ==, list_length );
     g_assert_cmpint( 0, ==, g_list_length( get_book_list() ) );
 }
@@ -373,17 +393,21 @@ test_qof_object_is_dirty( Fixture *fixture, gconstpointer pData )
     QofBook *book = NULL;
     gint32 list_length;
 
-    list_length = generate_and_register_objects( 1, MOCK_OBJECT_DIRTY ); /* need at least one oject for 3rd test */
-
     g_test_message( "Test null check returns false" );
     g_assert( qof_object_is_dirty( NULL ) == FALSE );
     
-    g_test_message( "Test with registered objects and suppose all collections are clean" );
+    g_test_message( "Test with no objects" );
     book = qof_book_new();
     g_assert( book );
+    object_dirty_struct.call_count = 0;
+    g_assert( qof_object_is_dirty( book ) == FALSE );
+    g_assert_cmpint( object_dirty_struct.call_count, ==, 0 );
+    
+    list_length = generate_and_register_objects( 1, MOCK_OBJECT_DIRTY );
+    
+    g_test_message( "Test with registered objects and suppose all collections are clean" );
     object_dirty_struct.objects = get_object_modules();
     object_dirty_struct.result = FALSE;
-    object_dirty_struct.call_count = 0;
     g_assert( qof_object_is_dirty( book ) == FALSE );
     g_assert_cmpint( object_dirty_struct.call_count, ==, list_length );
     
@@ -422,13 +446,18 @@ test_qof_object_mark_clean( Fixture *fixture, gconstpointer pData )
     QofBook *book = NULL;
     gint32 list_length;
 
-    list_length = generate_and_register_objects( 0, MOCK_OBJECT_MARK_CLEAN );
-    
-    g_test_message( "Test with registered objects and mark clean set up" );
+    g_test_message( "Test with no objects" );
     book = qof_book_new();
     g_assert( book );
-    object_mark_clean_struct.objects = get_object_modules();
     object_mark_clean_struct.call_count = 0;
+    g_assert_cmpint( g_list_length( get_object_modules() ), ==, 0 );
+    qof_object_mark_clean( book );
+    g_assert_cmpint( object_mark_clean_struct.call_count, ==, 0 );
+    
+    list_length = generate_and_register_objects( 1, MOCK_OBJECT_MARK_CLEAN );
+    
+    g_test_message( "Test with registered objects and mark clean set up" );
+    object_mark_clean_struct.objects = get_object_modules();
     qof_object_mark_clean( book );
     g_assert_cmpint( object_mark_clean_struct.call_count, ==, list_length );
 
@@ -546,7 +575,13 @@ test_qof_object_foreach_type( Fixture *fixture, gconstpointer pData )
     gint user_data;
     gint32 list_length;
 
-    list_length = generate_and_register_objects( 0, EMPTY );
+    g_test_message( "Test with no objects" );
+    foreach_type_cb_struct.call_count = 0;
+    g_assert_cmpint( g_list_length( get_object_modules() ), ==, 0 );
+    qof_object_foreach_type( mock_foreach_type_cb, ( gpointer ) &user_data );
+    g_assert_cmpint( foreach_type_cb_struct.call_count, ==, 0 );
+    
+    list_length = generate_and_register_objects( 1, EMPTY );
     
     g_test_message( "Test foreach cb" );
     foreach_type_cb_struct.objects = get_object_modules();
