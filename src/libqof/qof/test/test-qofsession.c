@@ -22,6 +22,7 @@
 
 #include "config.h"
 #include <glib.h>
+#include "test-stuff.h"
 #include "qof.h"
 #include "qofbackend-p.h"
 #include "qofsession-p.h"
@@ -73,5 +74,5 @@ test_session_safe_save( Fixture *fixture, gconstpointer pData )
 void
 test_suite_qofsession ( void )
 {
-    g_test_add( suitename, Fixture, NULL, setup, test_session_safe_save, teardown );
+    GNC_TEST_ADD( suitename, "qof session safe save", Fixture, NULL, setup, test_session_safe_save, teardown );
 }
