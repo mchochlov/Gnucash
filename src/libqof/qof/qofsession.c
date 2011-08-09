@@ -316,17 +316,6 @@ qof_session_ensure_all_data_loaded (QofSession *session)
 
 /* =============================================================== */
 
-typedef struct qof_instance_copy_data
-{
-    QofInstance *from;
-    QofInstance *to;
-    QofParam  *param;
-    GList  *referenceList;
-    GSList *param_list;
-    QofSession *new_session;
-    gboolean error;
-} QofInstanceCopyData;
-
 static void
 qof_book_set_partial(QofBook *book)
 {
