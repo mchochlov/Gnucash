@@ -26,9 +26,14 @@
 #include "qof.h"
 #include "qofbackend-p.h"
 #include "qofsession-p.h"
+#include "qofclass-p.h"
 
 static const gchar *suitename = "/qof/qofsession";
 void test_suite_qofsession ( void );
+
+extern void ( *p_qof_instance_foreach_copy )( gpointer data, gpointer user_data );
+
+extern void init_static_qofsession_pointers( void );
 
 typedef struct
 {

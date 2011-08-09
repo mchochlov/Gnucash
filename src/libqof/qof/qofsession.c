@@ -1634,4 +1634,16 @@ qof_session_export (QofSession *tmp_session,
     return TRUE;
 }
 
+/* ================= Static function access for testing ================= */
+
+void init_static_qofsession_pointers( void );
+
+void ( *p_qof_instance_foreach_copy )( gpointer data, gpointer user_data );
+
+void
+init_static_qofsession_pointers( void )
+{
+    p_qof_instance_foreach_copy = qof_instance_foreach_copy;
+}
+
 /* =================== END OF FILE ====================================== */
