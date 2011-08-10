@@ -58,7 +58,6 @@ setup( Fixture *fixture, gconstpointer pData )
 {
     fixture->session = qof_session_new();
     fixture->session->backend = g_new0( QofBackend, 1 );
-    fixture->session->backend->safe_sync = safe_sync;
 }
 
 static void
@@ -70,6 +69,7 @@ teardown( Fixture *fixture, gconstpointer pData )
 static void
 test_session_safe_save( Fixture *fixture, gconstpointer pData )
 {
+    fixture->session->backend->safe_sync = safe_sync;
     qof_session_safe_save( fixture->session, percentage_fn );
     g_assert_cmpint( ERR_BACKEND_DATA_CORRUPT, == ,
                      qof_session_get_error( fixture->session ));
