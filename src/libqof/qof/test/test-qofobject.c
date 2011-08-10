@@ -1,6 +1,6 @@
 /********************************************************************
- * test-qofobject.c: GLib g_test test suite for qofobject.c.		    *
- * Copyright 2011 John Ralls <jralls@ceridwen.us>		    *
+ * test-qofobject.c: GLib g_test test suite for qofobject.c.	    *
+ * Copyright 2011 Muslim Chochlov <muslim.chochlov@gmail.com>	    *
  *                                                                  *
  * This program is free software; you can redistribute it and/or    *
  * modify it under the terms of the GNU General Public License as   *
