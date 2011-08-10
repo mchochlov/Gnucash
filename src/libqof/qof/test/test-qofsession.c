@@ -356,6 +356,7 @@ test_qof_instance_foreach_copy( Fixture *fixture, gconstpointer pData )
     p_qof_instance_foreach_copy( &params[8], &qecd );
     g_assert( qecd.param == &params[8] );
     g_assert_cmpint( g_list_length( ( GList* )qof_book_get_data( book, ENTITYREFERENCE ) ), ==, 2 );
+    g_object_unref( ( QofInstance* ) foreach_copy_struct.data );
     
     qof_class_shutdown();
     g_object_unref( from );
