@@ -76,211 +76,435 @@ test_session_safe_save( Fixture *fixture, gconstpointer pData )
     g_assert( NULL == qof_session_get_url( fixture->session ));
 }
 
-static struct
-{
-    QofInstance *from;
-    QofInstance *to;
-    QofInstance *col_inst;
-    QofParam *param;
-    gboolean getter_called;
-    gboolean setter_called;
-    QofType type;
-    gpointer data;
-    QofBook *book;
-} foreach_copy_struct;
+/********************************************************************
+ *    Mock object 
+ * ******************************************************************/
+#define QOF_TYPE_UNREG "unregistered"
+#define MY_TEST_TYPE_NAME "my_test_type"
+#define MY_TEST_TYPE_DESC "Test type object"
+#define PARAM_STRING_NAME "string_name"
+#define PARAM_DATE_NAME "date_name"
+#define PARAM_NUMERIC_NAME "numeric_name"
+#define PARAM_GUID_NAME "guid_name"
+#define PARAM_INT32_NAME "int32_name"
+#define PARAM_INT64_NAME "int64_name"
+#define PARAM_DOUBLE_NAME "double_name"
+#define PARAM_BOOLEAN_NAME "boolean_name"
+#define PARAM_KVP_NAME "kvp_name"
+#define PARAM_CHAR_NAME "char_name"
+#define PARAM_COLLECTION_NAME "collection_name"
+#define PARAM_UNREG_NAME "unregistered_name"
 
-static gpointer 
-mock_getter( gpointer object, const QofParam *param)
+/* simple object structure */
+typedef struct MyTestType_s
 {
-    static Timespec ts_getter;
-    static gnc_numeric numeric_getter;
-    static gint32 gint32_getter;
-    static gint64 gint64_getter;
-    static double double_getter;
-    static gboolean gboolean_getter;
-    GncGUID *guid;
-    KvpFrame *frame;
-    
-    g_assert( object );
-    g_assert( param );
-    g_assert( foreach_copy_struct.from == (QofInstance*) object );
-    g_assert( foreach_copy_struct.param == param );
-    foreach_copy_struct.type = param->param_type;
-    if ( safe_strcmp( param->param_type, QOF_TYPE_STRING ) == 0 )
-    {
-	foreach_copy_struct.getter_called = TRUE;
-	return (gpointer) g_strdup( "string_type" );
-    }
-    if ( safe_strcmp( param->param_type, QOF_TYPE_DATE ) == 0 )
-    {
-	foreach_copy_struct.getter_called = TRUE;
-	ts_getter.tv_nsec = 3;
-	ts_getter.tv_sec = 7;
-	return ( gpointer ) &ts_getter;
-    }
-    if ( safe_strcmp( param->param_type, QOF_TYPE_NUMERIC ) == 0 )
-    {
-	foreach_copy_struct.getter_called = TRUE;
-	numeric_getter.num = 5;
-	numeric_getter.denom = 6;
-	return (gpointer) &numeric_getter;
-    }
-    if ( safe_strcmp( param->param_type, QOF_TYPE_GUID ) == 0 )
-    {
-	foreach_copy_struct.getter_called = TRUE;
-	guid = g_new0( GncGUID, 1 );
-	foreach_copy_struct.data = (gpointer) guid;
-	return (gpointer) guid;
-    }
-    if ( safe_strcmp( param->param_type, QOF_TYPE_INT32 ) == 0 )
-    {
-	foreach_copy_struct.getter_called = TRUE;
-	gint32_getter = 5;
-	return ( gpointer ) &gint32_getter;
-    }
-    if ( safe_strcmp( param->param_type, QOF_TYPE_INT64 ) == 0 )
-    {
-	foreach_copy_struct.getter_called = TRUE;
-	gint64_getter = 10;
-	return ( gpointer ) &gint64_getter;    
-    }
-    if ( safe_strcmp( param->param_type, QOF_TYPE_DOUBLE ) == 0 )
-    {
-	foreach_copy_struct.getter_called = TRUE;
-	double_getter = 10.5;
-	return ( gpointer ) &double_getter;    
-    }
-    if ( safe_strcmp( param->param_type, QOF_TYPE_BOOLEAN ) == 0 )
-    {
-	foreach_copy_struct.getter_called = TRUE;
-	gboolean_getter = TRUE;
-	return ( gpointer ) &gboolean_getter;
-    }
-    if ( safe_strcmp( param->param_type, QOF_TYPE_KVP ) == 0 )
-    {
-	foreach_copy_struct.getter_called = TRUE;
-	frame = kvp_frame_new();
-	foreach_copy_struct.data = (gpointer) frame;
-	return (gpointer) frame;
-    }
-    if ( safe_strcmp( param->param_type, QOF_TYPE_CHAR ) == 0 )
-    {
-	foreach_copy_struct.getter_called = TRUE;
-	return (gpointer) g_strdup( "gchar_type" );
-    }
-    if ( safe_strcmp( param->param_type, QOF_TYPE_COLLECT ) == 0 )
-    {
-	foreach_copy_struct.getter_called = TRUE;
-	foreach_copy_struct.col_inst = g_object_new( QOF_TYPE_INSTANCE, NULL );
-	/* this will create col of col_type and insert inst there */
-	qof_instance_init_data( foreach_copy_struct.col_inst, "col_type", foreach_copy_struct.book );
-	foreach_copy_struct.data = (gpointer) qof_book_get_collection( foreach_copy_struct.book, "col_type" );
-	return (gpointer) qof_book_get_collection( foreach_copy_struct.book, "col_type" );
-    }
-    if ( safe_strcmp( param->param_type, QOF_TYPE_CHAR ) == 0 )
-    {
-	foreach_copy_struct.getter_called = TRUE;
-	return (gpointer) g_strdup( "gchar_type" );
-    }
-    if ( safe_strcmp( param->param_type, "non_registered_type" ) == 0 )
-    {
-	foreach_copy_struct.getter_called = TRUE;
-	foreach_copy_struct.data = (gpointer) g_object_new( QOF_TYPE_INSTANCE, NULL );
-	qof_instance_init_data( ( QofInstance* ) foreach_copy_struct.data, "non_reg_type", foreach_copy_struct.book );
-	return foreach_copy_struct.data;
-    }
-    /* should not reach this place */
-    g_assert( FALSE );
-    return NULL;
+    QofInstance 	inst;
+    gchar       	*string_value;
+    Timespec    	date_value;
+    gnc_numeric 	numeric_value;
+    GncGUID 		*guid_value;
+    gint32      	gint32_value;
+    gint64 		gint64_value;
+    double      	double_value;
+    gboolean		bool_value;
+    KvpFrame		*frame;
+    gchar		char_value;
+    QofCollection	*col;
+    QofInstance		*unreg_type;
+} MyTestType;
+
+typedef struct MyTestTypeClass_s
+{
+    QofInstanceClass parent_class;
+} MyTestTypeClass;
+
+MyTestType* my_test_type_create( QofBook *book );
+gboolean my_test_type_register ( void );
+
+/* setters */
+void my_test_type_set_string( MyTestType*, gchar* );
+void my_test_type_set_date( MyTestType*, Timespec );
+void my_test_type_set_numeric( MyTestType*, gnc_numeric );
+void my_test_type_set_guid( MyTestType*, GncGUID* );
+void my_test_type_set_gint32( MyTestType*, gint32 );
+void my_test_type_set_gint64( MyTestType*, gint64 );
+void my_test_type_set_double( MyTestType*, double );
+void my_test_type_set_gboolean( MyTestType*, gboolean );
+void my_test_type_set_frame( MyTestType*, KvpFrame* );
+void my_test_type_set_char( MyTestType*, gchar );
+void my_test_type_set_col( MyTestType*, QofCollection* );
+void my_test_type_set_unreg_type( MyTestType*, QofInstance* );
+
+/* getter functions */
+gchar*	    	my_test_type_get_string( MyTestType* );
+Timespec    	my_test_type_get_date( MyTestType* );
+gnc_numeric 	my_test_type_get_numeric( MyTestType* );
+GncGUID*    	my_test_type_get_guid( MyTestType* );
+gint32	    	my_test_type_get_gint32( MyTestType* );
+gint64	    	my_test_type_get_gint64( MyTestType* );
+double	    	my_test_type_get_double( MyTestType* );
+gboolean    	my_test_type_get_gboolean( MyTestType* );
+KvpFrame*   	my_test_type_get_frame( MyTestType* );
+gchar       	my_test_type_get_char( MyTestType* );
+QofCollection* 	my_test_type_get_col( MyTestType* );
+QofInstance* 	my_test_type_get_unreg_type( MyTestType* );
+
+/* --- type macros --- */
+#define GNC_TYPE_MYTESTYPE            (gnc_my_test_type_get_type ())
+#define GNC_MYTESTYPE(o)              \
+     (G_TYPE_CHECK_INSTANCE_CAST ((o), GNC_TYPE_MYTESTYPE, MyTestType))
+#define GNC_MYTESTYPE_CLASS(k)        \
+     (G_TYPE_CHECK_CLASS_CAST((k), GNC_TYPE_MYTESTYPE, MyTestTypeClass))
+#define GNC_IS_MYTESTYPE(o)           \
+     (G_TYPE_CHECK_INSTANCE_TYPE ((o), GNC_TYPE_MYTESTYPE))
+#define GNC_IS_MYTESTYPE_CLASS(k)     \
+     (G_TYPE_CHECK_CLASS_TYPE ((k), GNC_TYPE_MYTESTYPE))
+#define GNC_MYTESTYPE_GET_CLASS(o)    \
+     (G_TYPE_INSTANCE_GET_CLASS ((o), GNC_TYPE_MYTESTYPE, MyTestTypeClass))
+
+GType gnc_my_test_type_get_type( void );
+
+/* GObject Initialization */
+QOF_GOBJECT_IMPL( gnc_my_test_type, MyTestType, QOF_TYPE_INSTANCE);
+
+static void
+gnc_my_test_type_init( MyTestType* obj )
+{
 }
 
 static void
-mock_setter( gpointer inst, gpointer data )
+gnc_my_test_type_dispose_real( GObject *objp )
 {
-    Timespec *ts;
-    gnc_numeric *numeric_setter;
-    gint32 *gint_32;
-    gint64 *gint_64;
-    double *double_setter;
-    gboolean *gboolean_setter;
-    
-    g_assert( inst );
-    g_assert( data );
-    g_assert( foreach_copy_struct.to == ( QofInstance* ) inst );
-    if ( safe_strcmp( foreach_copy_struct.type, QOF_TYPE_STRING ) == 0 )
-    {
-	g_assert_cmpstr( "string_type", ==, ( const char* ) data );
-	foreach_copy_struct.setter_called = TRUE;
-	g_free( data );
-	return;
-    }
-    if ( safe_strcmp( foreach_copy_struct.type, QOF_TYPE_DATE ) == 0 )
-    {
-	ts = ( Timespec* ) data;
-	g_assert_cmpint( ts->tv_nsec, ==, 3 );
-	g_assert_cmpint( ts->tv_sec, ==, 7 );
-	foreach_copy_struct.setter_called = TRUE;
-	return;
-    }
-    if ( safe_strcmp( foreach_copy_struct.type, QOF_TYPE_NUMERIC ) == 0 )
-    {
-	numeric_setter = ( gnc_numeric* ) data;
-	g_assert_cmpint( numeric_setter->num, ==, 5 );
-	g_assert_cmpint( numeric_setter->denom, ==, 6 );
-	foreach_copy_struct.setter_called = TRUE;
-	return;
-    }
-    if ( safe_strcmp( foreach_copy_struct.type, QOF_TYPE_GUID ) == 0 )
-    {
-	g_assert( guid_equal( ( GncGUID* ) foreach_copy_struct.data, ( GncGUID* ) data ) );
-	foreach_copy_struct.setter_called = TRUE;
-	g_free( data );
-	return;
-    }
-    if ( safe_strcmp( foreach_copy_struct.type, QOF_TYPE_INT32 ) == 0 )
-    {
-	gint_32 = ( gint32* ) data;
-	g_assert_cmpint( *gint_32, ==, 5 );
-	foreach_copy_struct.setter_called = TRUE;
-	return;
-    }
-    if ( safe_strcmp( foreach_copy_struct.type, QOF_TYPE_INT64 ) == 0 )
-    {
-	gint_64 = ( gint64* ) data;
-	g_assert_cmpint( *gint_64, ==, 10 );
-	foreach_copy_struct.setter_called = TRUE;
-	return;
-    }
-    if ( safe_strcmp( foreach_copy_struct.type, QOF_TYPE_DOUBLE ) == 0 )
-    {
-	double_setter = ( double* ) data;
-	g_assert_cmpfloat( *double_setter, ==, 10.5 );
-	foreach_copy_struct.setter_called = TRUE;
-	return;
-    }
-    if ( safe_strcmp( foreach_copy_struct.type, QOF_TYPE_BOOLEAN ) == 0 )
-    {
-	gboolean_setter = ( gboolean* ) data;
-	g_assert( *gboolean_setter == TRUE );
-	foreach_copy_struct.setter_called = TRUE;
-	return;
-    }
-    if ( safe_strcmp( foreach_copy_struct.type, QOF_TYPE_KVP ) == 0 )
-    {
-	g_assert_cmpint( kvp_frame_compare( ( KvpFrame* ) foreach_copy_struct.data, ( KvpFrame* ) data ), ==, 0 );
-	foreach_copy_struct.setter_called = TRUE;
-	kvp_frame_delete( ( KvpFrame* ) data );
-	return;
-    }
-    if ( safe_strcmp( foreach_copy_struct.type, QOF_TYPE_CHAR ) == 0 )
-    {
-	g_assert_cmpstr( "gchar_type", ==, ( gchar* ) data );
-	foreach_copy_struct.setter_called = TRUE;
-	g_free( data );
-	return;
-    }
 }
 
+static void
+gnc_my_test_type_finalize_real( GObject* objp )
+{
+    MyTestType* mtt = GNC_MYTESTYPE( objp );
+
+    if ( mtt->frame != NULL )
+	kvp_frame_delete( mtt->frame );
+    if ( mtt->string_value != NULL )
+	g_free( mtt->string_value );
+    if ( mtt->guid_value != NULL )
+	g_free( mtt->guid_value );
+    if ( mtt->col != NULL )
+	qof_collection_destroy( mtt->col );
+    if ( mtt->unreg_type != NULL )
+	g_object_unref( mtt->unreg_type );
+    mtt->frame = NULL;
+    mtt->string_value = NULL;
+    mtt->guid_value = NULL;
+    mtt->col = NULL;
+    mtt->unreg_type = NULL;
+}
+
+MyTestType* 
+my_test_type_create( QofBook *book )
+{
+    MyTestType *mtt;
+
+    g_assert( book );
+    mtt = g_object_new( GNC_TYPE_MYTESTYPE, NULL );
+    qof_instance_init_data( &mtt->inst, MY_TEST_TYPE_NAME, book );
+    mtt->string_value = NULL;
+    mtt->guid_value = NULL;
+    mtt->bool_value = FALSE;
+    mtt->frame = NULL;
+    mtt->col = NULL;
+    mtt->unreg_type = NULL;
+    qof_event_gen( &mtt->inst, QOF_EVENT_CREATE, NULL );
+    return mtt;
+}
+
+/* get/set string */
+
+void
+my_test_type_set_string( MyTestType* mtt, gchar* value )
+{
+    g_assert( mtt );
+    g_assert( value );
+    mtt->string_value = g_strdup( value );
+}
+
+gchar*
+my_test_type_get_string( MyTestType* mtt )
+{
+    g_assert( mtt );
+    return mtt->string_value;
+}
+
+/* get/set date */
+
+void
+my_test_type_set_date( MyTestType* mtt, Timespec value )
+{
+    g_assert( mtt );
+    mtt->date_value = value;
+}
+
+Timespec
+my_test_type_get_date( MyTestType* mtt )
+{
+    g_assert( mtt );
+    return mtt->date_value;
+}
+
+/* get/set numeric */
+
+void
+my_test_type_set_numeric( MyTestType* mtt, gnc_numeric value )
+{
+    g_assert( mtt );
+    mtt->numeric_value = value;
+}
+
+gnc_numeric
+my_test_type_get_numeric( MyTestType* mtt )
+{
+    g_assert( mtt );
+    return mtt->numeric_value;
+}
+
+/* get/set guid */
+
+void
+my_test_type_set_guid( MyTestType* mtt, GncGUID* value )
+{
+    char cm_sa[GUID_ENCODING_LENGTH + 1];
+    gchar *cm_string;
+
+    g_assert( mtt );
+    g_assert( value );
+    mtt->guid_value = g_new( GncGUID , 1 );
+    guid_to_string_buff( value, cm_sa);
+    cm_string = g_strdup( cm_sa );
+    g_assert( string_to_guid( cm_string, mtt->guid_value ) );
+    g_free(cm_string);
+}
+
+GncGUID*
+my_test_type_get_guid( MyTestType* mtt )
+{
+    g_assert( mtt );
+    return mtt->guid_value;
+}
+
+/* get/set int32 */
+
+void
+my_test_type_set_gint32( MyTestType* mtt, gint32 value )
+{
+    g_assert( mtt );
+    mtt->gint32_value = value;
+}
+
+gint32
+my_test_type_get_gint32( MyTestType* mtt )
+{
+    g_assert( mtt );
+    return mtt->gint32_value;
+}
+
+/* get/set int64 */
+
+void
+my_test_type_set_gint64( MyTestType* mtt, gint64 value )
+{
+    g_assert( mtt );
+    mtt->gint64_value = value;
+}
+
+gint64
+my_test_type_get_gint64( MyTestType* mtt )
+{
+    g_assert( mtt );
+    return mtt->gint64_value;
+}
+
+/* get/set double */
+
+void
+my_test_type_set_double( MyTestType* mtt, double value )
+{
+    g_assert( mtt );
+    mtt->double_value = value;
+}
+
+double
+my_test_type_get_double( MyTestType* mtt )
+{
+    g_assert( mtt );
+    return mtt->double_value;
+}
+
+/* get/set boolean */
+
+void
+my_test_type_set_gboolean( MyTestType* mtt, gboolean value )
+{
+    g_assert( mtt );
+    mtt->bool_value = value;
+}
+
+gboolean
+my_test_type_get_gboolean( MyTestType* mtt )
+{
+    g_assert( mtt );
+    return mtt->bool_value;
+}
+
+/* get/set frame */
+
+void
+my_test_type_set_frame( MyTestType* mtt, KvpFrame* value )
+{
+    g_assert( mtt );
+    g_assert( value );
+    mtt->frame = kvp_frame_copy( value );
+}
+
+KvpFrame*
+my_test_type_get_frame( MyTestType* mtt )
+{
+    g_assert( mtt );
+    return mtt->frame;
+}
+
+/* get/set char */
+
+void
+my_test_type_set_char( MyTestType* mtt, gchar value )
+{
+    g_assert( mtt );
+    mtt->char_value = value;
+}
+
+gchar
+my_test_type_get_char( MyTestType* mtt )
+{
+    g_assert( mtt );
+    return mtt->char_value;
+}
+
+/* get/set collection */
+
+void
+my_test_type_set_col( MyTestType* mtt, QofCollection* value )
+{
+    QofIdType type;
+    
+    g_assert( mtt );
+    g_assert( value );
+    type = qof_collection_get_type( value );
+    mtt->col = qof_collection_new( type );
+}
+
+QofCollection*
+my_test_type_get_col( MyTestType* mtt )
+{
+    g_assert( mtt );
+    return mtt->col;
+}
+
+/* get/set unreg type */
+
+void
+my_test_type_set_unreg_type( MyTestType* mtt, QofInstance* value )
+{
+    g_assert( mtt );
+    g_assert( value );
+    mtt->col = g_object_new( QOF_TYPE_INSTANCE, NULL );
+}
+
+QofInstance*
+my_test_type_get_unreg_type( MyTestType* mtt )
+{
+    g_assert( mtt );
+    return mtt->unreg_type;
+}
+
+static QofObject my_test_type_object_def =
+{
+interface_version:
+    QOF_OBJECT_VERSION,
+e_type:
+    MY_TEST_TYPE_NAME,
+type_label:
+    MY_TEST_TYPE_DESC,
+create:
+    (gpointer)my_test_type_create,
+book_begin:
+    NULL,
+book_end:
+    NULL,
+is_dirty:
+    NULL,
+mark_clean:
+    NULL,
+foreach:
+    qof_collection_foreach,
+printable:
+    NULL,
+version_cmp:
+    (int (*)(gpointer, gpointer)) qof_instance_version_cmp,
+};
+
+gboolean 
+my_test_type_register( void )
+{
+    static QofParam params[] = {
+	{ PARAM_STRING_NAME, QOF_TYPE_STRING, (QofAccessFunc)my_test_type_get_string, (QofSetterFunc)my_test_type_set_string, NULL, NULL },
+	{ PARAM_DATE_NAME, QOF_TYPE_DATE, (QofAccessFunc)my_test_type_get_date, (QofSetterFunc)my_test_type_set_date, NULL, NULL },
+	{ PARAM_NUMERIC_NAME, QOF_TYPE_NUMERIC, (QofAccessFunc)my_test_type_get_numeric, (QofSetterFunc)my_test_type_set_numeric, NULL, NULL },
+	{ PARAM_GUID_NAME, QOF_TYPE_GUID, (QofAccessFunc)my_test_type_get_guid, (QofSetterFunc)my_test_type_set_guid, NULL, NULL },
+	{ PARAM_INT32_NAME, QOF_TYPE_INT32, (QofAccessFunc)my_test_type_get_gint32, (QofSetterFunc)my_test_type_set_gint32, NULL, NULL },
+	{ PARAM_INT64_NAME, QOF_TYPE_INT64, (QofAccessFunc)my_test_type_get_gint64, (QofSetterFunc)my_test_type_set_gint64, NULL, NULL },
+	{ PARAM_DOUBLE_NAME, QOF_TYPE_DOUBLE, (QofAccessFunc)my_test_type_get_double, (QofSetterFunc)my_test_type_set_double, NULL, NULL },
+	{ PARAM_BOOLEAN_NAME, QOF_TYPE_BOOLEAN, (QofAccessFunc)my_test_type_get_gboolean, (QofSetterFunc)my_test_type_set_gboolean, NULL, NULL },
+	{ PARAM_KVP_NAME, QOF_TYPE_KVP, (QofAccessFunc)my_test_type_get_frame, (QofSetterFunc)my_test_type_set_frame, NULL, NULL },
+	{ PARAM_CHAR_NAME, QOF_TYPE_CHAR, (QofAccessFunc)my_test_type_get_char, (QofSetterFunc)my_test_type_set_char, NULL, NULL },
+	{ PARAM_COLLECTION_NAME, QOF_TYPE_COLLECT, (QofAccessFunc)my_test_type_get_col, (QofSetterFunc)my_test_type_set_col, NULL, NULL },
+	{ PARAM_UNREG_NAME, QOF_TYPE_UNREG, (QofAccessFunc)my_test_type_get_unreg_type, (QofSetterFunc)my_test_type_set_unreg_type, NULL, NULL }
+    };
+
+    qof_class_register( MY_TEST_TYPE_NAME, NULL, params );
+    return qof_object_register( &my_test_type_object_def );
+}
+
+static void
+fill_data( MyTestType *mtt )
+{
+    Timespec ts;
+    gnc_numeric gnc_n;
+    GncGUID *gnc_guid;
+    
+    g_assert( mtt );
+    mtt->string_value = g_strdup( "abcdefghijklmn" );
+    ts.tv_sec = 5;
+    ts.tv_nsec = 6;
+    mtt->date_value = ts;
+    gnc_n.num = 3;
+    gnc_n.denom = 7;
+    mtt->numeric_value = gnc_n;
+    gnc_guid = g_new( GncGUID, 1 );
+    guid_new( gnc_guid );
+    mtt->guid_value = gnc_guid;
+    mtt->gint32_value = 555;
+    mtt->gint64_value = 777;
+    mtt->double_value = 10.5;
+    mtt->bool_value = TRUE;
+    mtt->frame = kvp_frame_new();
+    mtt->char_value = 'y';
+    mtt->col = qof_collection_new( "new_type" );
+    mtt->unreg_type = g_object_new( QOF_TYPE_INSTANCE, NULL );
+}
+
+/********************************************************************
+ * Mock object end
+ * *****************************************************************/
+
+/*******************************************
 static void
 test_qof_instance_foreach_copy( Fixture *fixture, gconstpointer pData )
 {
