@@ -505,6 +505,10 @@ fill_data( MyTestType *mtt )
  * *****************************************************************/
 
 /*******************************************
+ *	TESTS
+ *
+ *******************************************/
+
 static void
 test_qof_instance_foreach_copy( Fixture *fixture, gconstpointer pData )
 {
@@ -513,76 +517,113 @@ test_qof_instance_foreach_copy( Fixture *fixture, gconstpointer pData )
      * getter takes value from source inst and setter sets it to dest inst
      */
     QofBook *book = NULL;
-    QofInstanceCopyData qecd;
-    QofInstance *from = NULL, *to = NULL;
-    int i;
-    
-    static QofParam params[] = {
-	{ "string_name", QOF_TYPE_STRING, mock_getter, mock_setter, NULL, NULL },
-	//{ "date_name", QOF_TYPE_DATE, mock_getter, mock_setter, NULL, NULL }
-	//{ "numeric_name", QOF_TYPE_NUMERIC, mock_getter, mock_setter, NULL, NULL },
-	{ "guid_name", QOF_TYPE_GUID, mock_getter, mock_setter, NULL, NULL },
-	{ "int32_name", QOF_TYPE_INT32, mock_getter, mock_setter, NULL, NULL },
-	{ "int64_name", QOF_TYPE_INT64, mock_getter, mock_setter, NULL, NULL },
-	//{ "double_name", QOF_TYPE_DOUBLE, mock_getter, mock_setter, NULL, NULL },
-	{ "boolean_name", QOF_TYPE_BOOLEAN, mock_getter, mock_setter, NULL, NULL },
-	{ "kvp_name", QOF_TYPE_KVP, mock_getter, mock_setter, NULL, NULL },
-	{ "char_name", QOF_TYPE_CHAR, mock_getter, mock_setter, NULL, NULL },
-	{ "collection_name", QOF_TYPE_COLLECT, mock_getter, NULL, NULL, NULL },
-	{ "nonreg_name", "non_registered_type", mock_getter, NULL, NULL, NULL }
-    };
-    
+    QofParam *param;
+    QofInstanceCopyData *qecd = NULL;
+    MyTestType *from = NULL, *to = NULL;
+
+    /* setup */
+    qof_object_initialize();
     qof_class_init();
-    qof_class_register ("my_test_object", NULL, params);
-    
-    from = g_object_new( QOF_TYPE_INSTANCE, NULL );
-    to = g_object_new( QOF_TYPE_INSTANCE, NULL );
-    g_assert( from );
-    from->e_type = "my_test_object";
-    g_assert( to );
-    init_static_qofsession_pointers();
-    g_assert( p_qof_instance_foreach_copy );
-    qecd.from = from;
-    qecd.to = to;
-    qecd.new_session = fixture->session;
     book = qof_session_get_book( fixture->session );
     g_assert( book );
+    g_assert( my_test_type_register() );
+    from = ( MyTestType* ) qof_object_new_instance( MY_TEST_TYPE_NAME, book );
+    to = ( MyTestType* ) qof_object_new_instance( MY_TEST_TYPE_NAME, book );
+    qecd = g_new0( QofInstanceCopyData, 1 );
+    g_assert( qecd );
+    init_static_qofsession_pointers();
+    g_assert( p_qof_instance_foreach_copy );
+    
+    /* init */
+    qecd->from = QOF_INSTANCE( from );
+    qecd->to = QOF_INSTANCE( to );
+    qecd->new_session = fixture->session;
     g_assert_cmpint( g_list_length( ( GList* )qof_book_get_data( book, ENTITYREFERENCE ) ), ==, 0 );
+    fill_data( from );
     
     g_test_message( "Test param copying for each registered type" );
-    foreach_copy_struct.from = from;
-    foreach_copy_struct.to = to;
-    foreach_copy_struct.book = book;
-    for ( i = 0; i < 8; i++ )
-    {
-	foreach_copy_struct.getter_called = FALSE;
-	foreach_copy_struct.setter_called = FALSE;
-	foreach_copy_struct.param = &params[i];
-	p_qof_instance_foreach_copy( &params[i], &qecd );
-	g_assert( qecd.param == &params[i] );
-	g_assert( foreach_copy_struct.getter_called == TRUE );
-	if ( safe_strcmp( params[i].param_type, QOF_TYPE_COLLECT ) == 0 )
-	{
-	    /* one ref per one collection entry */
-	    g_assert_cmpint( g_list_length( ( GList* )qof_book_get_data( book, ENTITYREFERENCE ) ), ==, 1 );
-	    qof_collection_remove_entity( foreach_copy_struct.col_inst );
-	    g_object_unref( foreach_copy_struct.col_inst );
-	}   
-	else
-	{
-	    g_assert( foreach_copy_struct.setter_called == TRUE );
-	}
-    }
+    g_assert_cmpstr( from->string_value, !=, to->string_value );
+    param = ( QofParam* ) qof_class_get_parameter( MY_TEST_TYPE_NAME, PARAM_STRING_NAME );
+    p_qof_instance_foreach_copy( ( gpointer ) param, qecd );
+    g_assert( qecd->param == param );
+    g_assert_cmpstr( from->string_value, ==, to->string_value );
+    
+    g_assert( !timespec_equal( &from->date_value, &to->date_value ) );
+    param = ( QofParam* ) qof_class_get_parameter( MY_TEST_TYPE_NAME, PARAM_DATE_NAME );
+    p_qof_instance_foreach_copy( ( gpointer ) param, qecd );
+    g_assert( qecd->param == param );
+    g_assert( timespec_equal( &from->date_value, &to->date_value ) );
+    
+    g_assert( !gnc_numeric_eq( from->numeric_value, to->numeric_value ) );
+    param = ( QofParam* ) qof_class_get_parameter( MY_TEST_TYPE_NAME, PARAM_NUMERIC_NAME );
+    p_qof_instance_foreach_copy( ( gpointer ) param, qecd );
+    g_assert( qecd->param == param );
+    g_assert( gnc_numeric_eq( from->numeric_value, to->numeric_value ) );
+    
+    g_assert( !guid_equal( from->guid_value, to->guid_value ) );
+    param = ( QofParam* ) qof_class_get_parameter( MY_TEST_TYPE_NAME, PARAM_GUID_NAME );
+    p_qof_instance_foreach_copy( ( gpointer ) param, qecd );
+    g_assert( qecd->param == param );
+    g_assert( guid_equal( from->guid_value, to->guid_value ) );
+        
+    g_assert_cmpint( from->gint32_value, !=, to->gint32_value );
+    param = ( QofParam* ) qof_class_get_parameter( MY_TEST_TYPE_NAME, PARAM_INT32_NAME );
+    p_qof_instance_foreach_copy( ( gpointer ) param, qecd );
+    g_assert( qecd->param == param );
+    g_assert_cmpint( from->gint32_value, ==, to->gint32_value );
+    
+    g_assert_cmpint( from->gint64_value, !=, to->gint64_value );
+    param = ( QofParam* ) qof_class_get_parameter( MY_TEST_TYPE_NAME, PARAM_INT64_NAME );
+    p_qof_instance_foreach_copy( ( gpointer ) param, qecd );
+    g_assert( qecd->param == param );
+    g_assert_cmpint( from->gint64_value, ==, to->gint64_value );
+    
+    g_assert_cmpfloat( from->double_value, !=, to->double_value );
+    param = ( QofParam* ) qof_class_get_parameter( MY_TEST_TYPE_NAME, PARAM_DOUBLE_NAME );
+    p_qof_instance_foreach_copy( ( gpointer ) param, qecd );
+    g_assert( qecd->param == param );
+    g_assert_cmpfloat( from->double_value, ==, to->double_value );
+    
+    g_assert( from->bool_value != to->bool_value );
+    param = ( QofParam* ) qof_class_get_parameter( MY_TEST_TYPE_NAME, PARAM_BOOLEAN_NAME );
+    p_qof_instance_foreach_copy( ( gpointer ) param, qecd );
+    g_assert( qecd->param == param );
+    g_assert( from->bool_value == to->bool_value );
+    
+    g_assert_cmpint( kvp_frame_compare( from->frame, to->frame ), !=, 0 );
+    param = ( QofParam* ) qof_class_get_parameter( MY_TEST_TYPE_NAME, PARAM_KVP_NAME );
+    p_qof_instance_foreach_copy( ( gpointer ) param, qecd );
+    g_assert( qecd->param == param );
+    g_assert_cmpint( kvp_frame_compare( from->frame, to->frame ), ==, 0 );
+    
+    g_assert_cmpuint( from->char_value, !=, to->char_value );
+    param = ( QofParam* ) qof_class_get_parameter( MY_TEST_TYPE_NAME, PARAM_CHAR_NAME );
+    p_qof_instance_foreach_copy( ( gpointer ) param, qecd );
+    g_assert( qecd->param == param );
+    g_assert_cmpuint( from->char_value, ==, to->char_value );
+    
+    g_assert( from->col != NULL );
+    g_assert( to->col == NULL );
+    param = ( QofParam* ) qof_class_get_parameter( MY_TEST_TYPE_NAME, PARAM_COLLECTION_NAME );
+    p_qof_instance_foreach_copy( ( gpointer ) param, qecd );
+    g_assert( qecd->param == param );
+    g_assert( to->col == NULL );
+    /* empty col doesn't produce any ref data */
+    g_assert_cmpint( g_list_length( ( GList* )qof_book_get_data( book, ENTITYREFERENCE ) ), ==, 0 );
     
     g_test_message( "Test param copying for unregistered type" );
+    g_assert( from->unreg_type != NULL );
+    g_assert( to->unreg_type == NULL );
+    param = ( QofParam* ) qof_class_get_parameter( MY_TEST_TYPE_NAME, PARAM_UNREG_NAME );
+    p_qof_instance_foreach_copy( ( gpointer ) param, qecd );
+    g_assert( qecd->param == param );
+    g_assert( to->unreg_type == NULL );
+    /* ref data increased by 1 */
     g_assert_cmpint( g_list_length( ( GList* )qof_book_get_data( book, ENTITYREFERENCE ) ), ==, 1 );
-    foreach_copy_struct.param = &params[8];
-    p_qof_instance_foreach_copy( &params[8], &qecd );
-    g_assert( qecd.param == &params[8] );
-    g_assert_cmpint( g_list_length( ( GList* )qof_book_get_data( book, ENTITYREFERENCE ) ), ==, 2 );
-    g_object_unref( ( QofInstance* ) foreach_copy_struct.data );
-    
+
     qof_class_shutdown();
+    qof_object_shutdown();
+    g_free( qecd );
     g_object_unref( from );
     g_object_unref( to );
 }
