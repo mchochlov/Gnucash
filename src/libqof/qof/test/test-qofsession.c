@@ -32,6 +32,7 @@ static const gchar *suitename = "/qof/qofsession";
 void test_suite_qofsession ( void );
 
 extern void ( *p_qof_instance_foreach_copy )( gpointer data, gpointer user_data );
+extern void ( *p_qof_instance_list_foreach )( gpointer data, gpointer user_data );
 
 extern void init_static_qofsession_pointers( void );
 
@@ -628,9 +629,69 @@ test_qof_instance_foreach_copy( Fixture *fixture, gconstpointer pData )
     g_object_unref( to );
 }
 
+static void
+test_qof_instance_list_foreach( Fixture *fixture, gconstpointer pData )
+{
+    /* Function takes QofInstance and QofInstanceCopyData as an input
+     * 
+     */
+    QofInstanceCopyData *qecd = NULL;
+    MyTestType *source = NULL;
+    QofBook *source_book = NULL;
+    
+    /* setup */
+    qof_object_initialize();
+    qof_class_init();
+    source_book = qof_book_new();
+    g_assert( source_book );
+    g_assert( my_test_type_register() );
+    source = ( MyTestType* ) qof_object_new_instance( MY_TEST_TYPE_NAME, source_book );
+    qecd = g_new0( QofInstanceCopyData, 1 );
+    g_assert( qecd );
+    init_static_qofsession_pointers();
+    g_assert( p_qof_instance_list_foreach );
+    
+    /* init */
+    qecd->new_session = fixture->session;
+    fill_data( source );
+    
+    /* tests */
+    g_test_message( "Test for compliance error" );
+    qecd->error = FALSE;
+    my_test_type_object_def.foreach = NULL;
+    p_qof_instance_list_foreach( source, qecd );
+    g_assert( qecd->error );
+    g_assert( qecd->from == ( QofInstance* )source );
+    
+    g_test_message( "Test copy of object is done, list of params created" );
+    qecd->error = FALSE;
+    qecd->from = NULL;
+    qecd->to = NULL;
+    qecd->param_list = NULL;
+    my_test_type_object_def.foreach = qof_collection_foreach;
+    p_qof_instance_list_foreach( source, qecd ); /* run */
+    g_assert( qecd->from == ( QofInstance* )source );
+    g_assert( qecd->to );
+    g_assert( QOF_IS_INSTANCE( qecd->to ) );
+    g_assert( qecd->from != qecd->to );
+    g_assert_cmpint( qof_instance_guid_compare( QOF_INSTANCE( source ), qecd->to ), ==, 0 );
+    g_assert( qecd->param_list );
+    g_assert_cmpint( g_slist_length( qecd->param_list ), ==, 12 );
+    g_assert( !qecd->error );
+    
+    /* clean up */
+    g_object_unref( source );
+    g_object_unref( qecd->to );
+    qof_book_destroy( source_book );
+    g_free( qecd );
+    qof_object_shutdown();
+    qof_class_shutdown();
+}
+
 void
 test_suite_qofsession ( void )
 {
     GNC_TEST_ADD( suitename, "qof session safe save", Fixture, NULL, setup, test_session_safe_save, teardown );
     GNC_TEST_ADD( suitename, "qof instance foreach copy", Fixture, NULL, setup, test_qof_instance_foreach_copy, teardown );
+    GNC_TEST_ADD( suitename, "qof instance list foreach", Fixture, NULL, setup, test_qof_instance_list_foreach, teardown );
 }

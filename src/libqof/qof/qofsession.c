@@ -1639,11 +1639,13 @@ qof_session_export (QofSession *tmp_session,
 void init_static_qofsession_pointers( void );
 
 void ( *p_qof_instance_foreach_copy )( gpointer data, gpointer user_data );
+void ( *p_qof_instance_list_foreach )( gpointer data, gpointer user_data );
 
 void
 init_static_qofsession_pointers( void )
 {
     p_qof_instance_foreach_copy = qof_instance_foreach_copy;
+    p_qof_instance_list_foreach = qof_instance_list_foreach;
 }
 
 /* =================== END OF FILE ====================================== */
