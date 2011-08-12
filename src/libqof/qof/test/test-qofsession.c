@@ -31,8 +31,13 @@
 static const gchar *suitename = "/qof/qofsession";
 void test_suite_qofsession ( void );
 
+extern GSList* get_provider_list( void );
+extern gboolean get_qof_providers_initialized( void );
+
 extern void ( *p_qof_instance_foreach_copy )( gpointer data, gpointer user_data );
 extern void ( *p_qof_instance_list_foreach )( gpointer data, gpointer user_data );
+extern void ( *p_qof_session_load_backend )( QofSession * session, const char * access_method );
+extern void ( *p_qof_session_clear_error )( QofSession * session );
 
 extern void init_static_qofsession_pointers( void );
 
@@ -688,10 +693,113 @@ test_qof_instance_list_foreach( Fixture *fixture, gconstpointer pData )
     qof_class_shutdown();
 }
 
+static struct
+{
+    QofBackend *be;
+    gboolean data_compatible;
+    gboolean check_data_type_called;
+    gboolean backend_new_called;
+} load_backend_struct;
+
+static gboolean 
+mock_check_data_type( const char* book_id )
+{
+    g_assert( book_id );
+    g_assert_cmpstr( book_id, ==, "my book" );
+    load_backend_struct.check_data_type_called = TRUE;
+    return load_backend_struct.data_compatible;
+}
+
+static QofBackend* 
+mock_backend_new( void )
+{
+    QofBackend *be = NULL;
+    
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    load_backend_struct.be = be;
+    load_backend_struct.backend_new_called = TRUE;
+    return be;
+}
+
+static void
+test_qof_session_load_backend( Fixture *fixture, gconstpointer pData )
+{
+    QofBackendProvider *prov = NULL;
+    QofBook *book = NULL;
+    
+    /* init */
+    prov = g_new0( QofBackendProvider, 1 );
+    init_static_qofsession_pointers();
+    
+    g_test_message( "Test when no provider is registered" );
+    g_assert( !get_qof_providers_initialized() );
+    g_assert( get_provider_list() == NULL );
+    p_qof_session_load_backend( fixture->session, "file" );
+    g_assert( get_qof_providers_initialized() );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_HANDLER );
+    g_assert_cmpstr( qof_session_get_error_message( fixture->session ), ==, "failed to load 'file' using access_method" );
+    p_qof_session_clear_error( fixture->session );
+    
+    g_test_message( "Test with provider registered but access method not supported" );
+    prov->access_method = "unsupported";
+    qof_backend_register_provider( prov );
+    g_assert( get_provider_list() );
+    g_assert_cmpint( g_slist_length( get_provider_list() ), ==, 1 );
+    p_qof_session_load_backend( fixture->session, "file" );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_HANDLER );
+    g_assert_cmpstr( qof_session_get_error_message( fixture->session ), ==, "failed to load 'file' using access_method" );
+    p_qof_session_clear_error( fixture->session );
+    
+    g_test_message( "Test with access method supported but type incompatible" );
+    prov->access_method = "file";
+    prov->check_data_type = mock_check_data_type;
+    load_backend_struct.data_compatible = FALSE;
+    load_backend_struct.check_data_type_called = FALSE;
+    fixture->session->book_id = g_strdup( "my book" );
+    p_qof_session_load_backend( fixture->session, "file" );
+    g_assert( load_backend_struct.check_data_type_called );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_HANDLER );
+    g_assert_cmpstr( qof_session_get_error_message( fixture->session ), ==, "failed to load 'file' using access_method" );
+    p_qof_session_clear_error( fixture->session );
+    
+    g_test_message( "Test with type compatible but backend_new not set" );
+    prov->backend_new = NULL;
+    load_backend_struct.data_compatible = TRUE;
+    load_backend_struct.check_data_type_called = FALSE;
+    p_qof_session_load_backend( fixture->session, "file" );
+    g_assert( load_backend_struct.check_data_type_called );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_HANDLER );
+    g_assert_cmpstr( qof_session_get_error_message( fixture->session ), ==, "failed to load 'file' using access_method" );
+    p_qof_session_clear_error( fixture->session );
+    
+    g_test_message( "Test with type compatible backend_new set" );
+    prov->backend_new = mock_backend_new;
+    load_backend_struct.be = NULL;
+    load_backend_struct.data_compatible = TRUE;
+    load_backend_struct.check_data_type_called = FALSE;
+    load_backend_struct.backend_new_called = FALSE;
+    g_assert( fixture->session->backend == NULL );
+    book = qof_session_get_book( fixture->session );
+    g_assert( book );
+    g_assert( qof_book_get_backend( book ) == NULL );
+    p_qof_session_load_backend( fixture->session, "file" );
+    g_assert( load_backend_struct.check_data_type_called );
+    g_assert( load_backend_struct.backend_new_called );
+    g_assert( load_backend_struct.be );
+    g_assert( load_backend_struct.be == fixture->session->backend );
+    g_assert( prov == fixture->session->backend->provider );
+    g_assert( qof_book_get_backend( book ) == load_backend_struct.be );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_ERR );
+
+    g_free( prov );
+}
+
 void
 test_suite_qofsession ( void )
 {
     GNC_TEST_ADD( suitename, "qof session safe save", Fixture, NULL, setup, test_session_safe_save, teardown );
     GNC_TEST_ADD( suitename, "qof instance foreach copy", Fixture, NULL, setup, test_qof_instance_foreach_copy, teardown );
     GNC_TEST_ADD( suitename, "qof instance list foreach", Fixture, NULL, setup, test_qof_instance_list_foreach, teardown );
+    GNC_TEST_ADD( suitename, "qof session load backend", Fixture, NULL, setup, test_qof_session_load_backend, teardown );
 }
