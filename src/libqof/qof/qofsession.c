@@ -57,6 +57,20 @@ static QofLogModule log_module = QOF_MOD_SESSION;
 static GSList *provider_list = NULL;
 static gboolean qof_providers_initialized = FALSE;
 
+/*
+ * These getters are used in tests to reach static vars from outside
+ * They should be removed when no longer needed
+ */
+
+GSList* get_provider_list( void );
+gboolean get_qof_providers_initialized( void );
+
+GSList* 
+get_provider_list( void ) { return provider_list; }
+
+gboolean
+get_qof_providers_initialized( void ) { return qof_providers_initialized; }
+
 /* ====================================================================== */
 
 void
