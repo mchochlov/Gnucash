@@ -795,6 +795,70 @@ test_qof_session_load_backend( Fixture *fixture, gconstpointer pData )
     g_free( prov );
 }
 
+static struct
+{
+    QofBackend *be;
+    QofBook *oldbook;
+    gboolean error;
+    gboolean load_called;
+} load_session_struct;
+
+static void 
+mock_load( QofBackend *be, QofBook *book, QofBackendLoadType type )
+{
+    g_assert( be );
+    g_assert( book );
+    g_assert( be == load_session_struct.be );
+    g_assert( book != load_session_struct.oldbook );
+    g_assert( qof_book_get_backend( book ) == be );
+    if ( load_session_struct.error )
+	qof_backend_set_error( be, ERR_BACKEND_DATA_CORRUPT ); /* just any valid error */
+    load_session_struct.load_called = TRUE;
+}
+
+static void
+test_qof_session_load( Fixture *fixture, gconstpointer pData )
+{
+    /* Method initializes a new book and loads data into it
+     * if load fails old books are restored
+     */
+    QofBackend *be = NULL;
+    QofBook *newbook = NULL;
+    
+    /* init */
+    fixture->session->book_id = g_strdup( "my book" );
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    fixture->session->backend = be;
+    be->load = mock_load;
+    
+    g_test_message( "Test when no error is produced" );
+    g_assert( be->percentage == NULL );
+    load_session_struct.be = be;
+    load_session_struct.oldbook = qof_session_get_book( fixture->session );
+    g_assert_cmpint( g_list_length( fixture->session->books ), ==, 1 );
+    load_session_struct.error = FALSE;
+    load_session_struct.load_called = FALSE;
+    qof_session_load( fixture->session, percentage_fn );
+    newbook = qof_session_get_book( fixture->session );
+    g_assert( newbook );
+    g_assert( load_session_struct.oldbook != newbook );
+    g_assert_cmpint( g_list_length( fixture->session->books ), ==, 1 );
+    load_session_struct.load_called = TRUE;
+    
+    g_test_message( "Test when no is produced" );
+    load_session_struct.oldbook = qof_session_get_book( fixture->session );
+    g_assert_cmpint( g_list_length( fixture->session->books ), ==, 1 );
+    load_session_struct.error = TRUE;
+    load_session_struct.load_called = FALSE;
+    qof_session_load( fixture->session, percentage_fn );
+    newbook = qof_session_get_book( fixture->session );
+    g_assert( newbook );
+    g_assert( load_session_struct.oldbook == newbook );
+    g_assert_cmpint( g_list_length( fixture->session->books ), ==, 1 );
+    load_session_struct.load_called = TRUE;
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -802,4 +866,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof instance foreach copy", Fixture, NULL, setup, test_qof_instance_foreach_copy, teardown );
     GNC_TEST_ADD( suitename, "qof instance list foreach", Fixture, NULL, setup, test_qof_instance_list_foreach, teardown );
     GNC_TEST_ADD( suitename, "qof session load backend", Fixture, NULL, setup, test_qof_session_load_backend, teardown );
+    GNC_TEST_ADD( suitename, "qof session load", Fixture, NULL, setup, test_qof_session_load, teardown );
 }
