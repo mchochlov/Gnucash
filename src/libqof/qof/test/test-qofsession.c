@@ -33,6 +33,7 @@ void test_suite_qofsession ( void );
 
 extern GSList* get_provider_list( void );
 extern gboolean get_qof_providers_initialized( void );
+extern void unregister_all_providers( void );
 
 extern void ( *p_qof_instance_foreach_copy )( gpointer data, gpointer user_data );
 extern void ( *p_qof_instance_list_foreach )( gpointer data, gpointer user_data );

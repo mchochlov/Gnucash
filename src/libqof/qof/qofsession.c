@@ -64,12 +64,24 @@ static gboolean qof_providers_initialized = FALSE;
 
 GSList* get_provider_list( void );
 gboolean get_qof_providers_initialized( void );
+void unregister_all_providers( void );
 
 GSList* 
 get_provider_list( void ) { return provider_list; }
 
 gboolean
 get_qof_providers_initialized( void ) { return qof_providers_initialized; }
+
+void
+unregister_all_providers( void )
+{
+    if ( provider_list )
+    {
+	g_slist_foreach( provider_list, ( GFunc ) g_free, NULL );
+	g_slist_free( provider_list );
+	provider_list = NULL;
+    }
+}
 
 /* ====================================================================== */
 
