@@ -861,6 +861,132 @@ test_qof_session_load( Fixture *fixture, gconstpointer pData )
     load_session_struct.load_called = TRUE;
 }
 
+static struct
+{
+    QofBackend *be;
+    QofSession *session;
+    const char *book_id;
+    gboolean backend_new_called;
+    gboolean session_begin_called;
+    gboolean produce_error;
+} session_begin_struct;
+
+static void
+mock_session_begin( QofBackend *be, QofSession *session, const char *book_id,
+                    gboolean ignore_lock, gboolean create, gboolean force )
+{
+    g_assert( be );
+    g_assert( be == session_begin_struct.be );
+    g_assert( session );
+    g_assert( session == session_begin_struct.session );
+    g_assert( book_id );
+    g_assert_cmpstr( book_id, ==, session_begin_struct.book_id );
+    g_assert( ignore_lock );
+    g_assert( !create );
+    g_assert( force );
+    if ( session_begin_struct.produce_error )
+    {
+	qof_backend_set_error( be, ERR_BACKEND_DATA_CORRUPT );
+	qof_backend_set_message( be, "push any error" );
+    }
+    session_begin_struct.session_begin_called = TRUE;
+}
+
+static QofBackend* 
+mock_backend_new_for_begin( void )
+{
+    QofBackend *be = NULL;
+    
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    be->session_begin = mock_session_begin;
+    session_begin_struct.be = be;
+    session_begin_struct.backend_new_called = TRUE;
+    return be;
+}
+
+static void
+test_qof_session_begin( Fixture *fixture, gconstpointer pData )
+{
+    gboolean ignore_lock, create, force;
+    QofBackend *be = NULL;
+    QofBackendProvider *prov = NULL;
+    
+    /* setup */
+    ignore_lock = TRUE;
+    create = FALSE;
+    force = TRUE;
+    
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    g_assert_cmpint( g_slist_length( get_provider_list() ), ==, 0 );
+    prov = g_new0( QofBackendProvider, 1 );
+    prov->backend_new = mock_backend_new_for_begin;
+    
+    /* run tests */
+    g_test_message( "Test when book_id is set backend is not changed" );
+    fixture->session->backend = be;
+    fixture->session->book_id = g_strdup("my book");
+    qof_session_begin( fixture->session, "my book", ignore_lock, create, force );
+    g_assert( fixture->session->backend == be );
+    
+    g_test_message( "Test when session book_id is not set and book_id passed is null backend is not changed" );
+    g_free( fixture->session->book_id );
+    fixture->session->book_id = NULL;
+    qof_session_begin( fixture->session, NULL, ignore_lock, create, force );
+    g_assert( fixture->session->backend == be );
+    
+    g_test_message( "Test default access_method parsing" );
+    /* routine will destroy old backend 
+     * parse access_method as 'file' and try to find backend
+     * as there is no backend registered error will be raised
+     */
+    qof_session_begin( fixture->session, "default_should_be_file", ignore_lock, create, force );
+    g_assert( fixture->session->backend == NULL );
+    g_assert( fixture->session->book_id == NULL );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_HANDLER );
+    g_assert_cmpstr( qof_session_get_error_message( fixture->session ), ==, "failed to load 'file' using access_method" );
+    
+    g_test_message( "Test access_method parsing" );
+    qof_session_begin( fixture->session, "postgres://localhost:8080", ignore_lock, create, force );
+    g_assert( fixture->session->backend == NULL );
+    g_assert( fixture->session->book_id == NULL );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_HANDLER );
+    g_assert_cmpstr( qof_session_get_error_message( fixture->session ), ==, "failed to load 'postgres' using access_method" );
+    
+    g_test_message( "Test with valid backend returned and session begin set; error is produced" );
+    session_begin_struct.session = fixture->session;
+    session_begin_struct.book_id = "postgres://localhost:8080";
+    session_begin_struct.backend_new_called = FALSE;
+    session_begin_struct.session_begin_called = FALSE;
+    session_begin_struct.produce_error = TRUE;
+    prov->access_method = "postgres";
+    qof_backend_register_provider( prov );
+    qof_session_begin( fixture->session, "postgres://localhost:8080", ignore_lock, create, force );
+    g_assert( fixture->session->backend );
+    g_assert( session_begin_struct.be == fixture->session->backend );
+    g_assert( session_begin_struct.backend_new_called == TRUE );
+    g_assert( session_begin_struct.session_begin_called == TRUE );
+    g_assert( fixture->session->book_id == NULL );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_DATA_CORRUPT );
+    g_assert_cmpstr( qof_session_get_error_message( fixture->session ), ==, "push any error" );
+    
+    g_test_message( "Test normal session_begin execution" );
+    session_begin_struct.backend_new_called = FALSE;
+    session_begin_struct.session_begin_called = FALSE;
+    session_begin_struct.produce_error = FALSE;
+    qof_session_begin( fixture->session, "postgres://localhost:8080", ignore_lock, create, force );
+    g_assert( fixture->session->backend );
+    g_assert( session_begin_struct.be == fixture->session->backend );
+    g_assert( session_begin_struct.backend_new_called == TRUE );
+    g_assert( session_begin_struct.session_begin_called == TRUE );
+    g_assert( fixture->session->book_id );
+    g_assert_cmpstr( fixture->session->book_id, ==, "postgres://localhost:8080" );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_ERR );
+    
+    unregister_all_providers();
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -869,4 +995,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof instance list foreach", Fixture, NULL, setup, test_qof_instance_list_foreach, teardown );
     GNC_TEST_ADD( suitename, "qof session load backend", Fixture, NULL, setup, test_qof_session_load_backend, teardown );
     GNC_TEST_ADD( suitename, "qof session load", Fixture, NULL, setup, test_qof_session_load, teardown );
+    GNC_TEST_ADD( suitename, "qof session begin", Fixture, NULL, setup, test_qof_session_begin, teardown );
 }
