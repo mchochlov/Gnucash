@@ -312,7 +312,7 @@ gnc_ui_account_get_balance_full (xaccGetBalanceInCurrencyFn fn,
 }
 
 /*
- * This routine retrives the total balance in an account, possibly
+ * This routine retrieves the total balance in an account, possibly
  * including all sub-accounts under the specified account.
  */
 gnc_numeric
@@ -323,7 +323,7 @@ gnc_ui_account_get_balance (const Account *account, gboolean recurse)
 }
 
 /*
- * This routine retrives the total balance in an account converted to
+ * This routine retrieves the total balance in an account converted to
  * a given currency, possibly including all sub-accounts under the
  * specified account.
  */
@@ -337,7 +337,7 @@ gnc_ui_account_get_balance_in_currency (const Account *account,
 }
 
 /*
- * This routine retrives the reconciled balance in an account,
+ * This routine retrieves the reconciled balance in an account,
  * possibly including all sub-accounts under the specified account.
  */
 gnc_numeric
@@ -453,6 +453,94 @@ gnc_ui_account_get_balance_as_of_date (Account *account,
         balance = gnc_numeric_neg (balance);
 
     return balance;
+}
+
+/*
+ * This is a wrapper routine around an gncOwnerGetBalanceInCurrency
+ * function that handles additional needs of the gui.
+ *
+ * @param owner     The owner to retrieve data about.
+ * @param negative  An indication of whether or not the returned value
+ *                  is negative.  This can be used by the caller to
+ *                  easily decode whether or not to color the output.
+ * @param commodity The commodity in which the account balance should
+ *                  be returned. If NULL, the value will be returned in
+ *                  the commodity of the owner. This is normally used
+ *                  to specify a currency, which forces the conversion
+ *                  of things like stock account values from share
+ *                  values to an amount the requested currency.
+ */
+gnc_numeric
+gnc_ui_owner_get_balance_full (GncOwner *owner,
+                               gboolean *negative,
+                               const gnc_commodity *commodity)
+{
+    gnc_numeric balance;
+
+    if (!owner)
+        return gnc_numeric_zero ();
+
+    balance = gncOwnerGetBalanceInCurrency (owner, commodity);
+
+    /* reverse sign if needed */
+    if ((gncOwnerGetType (owner) == GNC_OWNER_CUSTOMER))
+        balance = gnc_numeric_neg (balance);
+
+    /* Record whether the balance is negative. */
+    if (negative)
+        *negative = gnc_numeric_negative_p (balance);
+
+    return balance;
+}
+
+
+/**
+ * Wrapper around gnc_ui_owner_get_balance_full that converts
+ * the resulting number to a character string.  The number is
+ * formatted according to the specification of the owner currency.
+ * The caller is responsible for g_free'ing the returned memory.
+ *
+ * @param owner   The owner to retrieve data about.
+ * @param negative  An indication of whether or not the returned value
+ *                  is negative.  This can be used by the caller to
+ *                  easily decode whether or not to color the output.
+ */
+gchar *
+gnc_ui_owner_get_print_balance (GncOwner *owner,
+                                gboolean *negative)
+{
+    gnc_numeric balance;
+    GNCPrintAmountInfo print_info;
+
+    balance = gnc_ui_owner_get_balance_full (owner, negative, NULL);
+    print_info = gnc_commodity_print_info (gncOwnerGetCurrency (owner), TRUE);
+    return g_strdup (xaccPrintAmount (balance, print_info));
+}
+
+/**
+ * Wrapper around gnc_ui_owner_get_balance_full that converts
+ * the resulting number to a character string.  The number is
+ * formatted according to the specification of the default reporting
+ * currency.
+ *
+ * @param account   The owner to retrieve data about.
+ * @param negative  An indication of whether or not the returned value
+ *                  is negative.  This can be used by the caller to
+ *                  easily decode whether or not to color the output.
+ */
+gchar *
+gnc_ui_owner_get_print_report_balance (GncOwner *owner,
+                                       gboolean *negative)
+{
+    GNCPrintAmountInfo print_info;
+    gnc_numeric balance;
+    gnc_commodity *report_commodity;
+
+    report_commodity = gnc_default_report_currency ();
+    balance = gnc_ui_owner_get_balance_full (owner, negative,
+                                               report_commodity);
+    print_info = gnc_commodity_print_info (report_commodity, TRUE);
+    return g_strdup (xaccPrintAmount (balance, print_info));
 }
 
 /* Caller is responsible for g_free'ing returned memory */
@@ -741,7 +829,7 @@ string_after_colon (const char *msgstr)
  * gnc_get_reconcile_str                                            *
  *   return the i18n'd string for the given reconciled flag         *
  *                                                                  *
- * Args: reconciled_flag - the flag to stringize                    *
+ * Args: reconciled_flag - the flag to convert into a string        *
  * Returns: the i18n'd reconciled string                            *
 \********************************************************************/
 const char *
@@ -789,7 +877,7 @@ gnc_get_reconcile_valid_flags (void)
  * gnc_get_reconcile_flag_order                                     *
  *   return a string containing the reconciled-flag change order    *
  *                                                                  *
- * Args: reconciled_flag - the flag to stringize                    *
+ * Args: reconciled_flag - the flag to convert into a string        *
  * Returns: the i18n'd reconciled string                            *
 \********************************************************************/
 const char *
@@ -1343,7 +1431,7 @@ PrintAmountInternal(char *buf, gnc_numeric val, const GNCPrintAmountInfo *info)
         return 0;
     }
 
-    /* Print the absolute value, but remember negativity */
+    /* Print the absolute value, but remember sign */
     value_is_negative = gnc_numeric_negative_p (val);
     val = gnc_numeric_abs (val);
 
@@ -1747,10 +1835,10 @@ static gchar *big_numbers[] =
        thousands. */
     "Million",
     /* Translators: This is the word for the number 10^9, one thousand
-       millions. WATCH OUT: In British english and many other languages
+       millions. WATCH OUT: In British English and many other languages
        this word is used for 10^12 which is one million millions! In
        contrast to this, here in GnuCash this is used in the American
-       english meaning of 10^9.  */
+       English meaning of 10^9.  */
     "Billion",
     /* Translators: This is the word for the number 10^12, one million
        millions. */
