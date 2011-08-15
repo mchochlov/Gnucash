@@ -793,7 +793,8 @@ test_qof_session_load_backend( Fixture *fixture, gconstpointer pData )
     g_assert( qof_book_get_backend( book ) == load_backend_struct.be );
     g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_ERR );
 
-    g_free( prov );
+    unregister_all_providers();
+    g_assert_cmpint( g_slist_length( get_provider_list() ), ==, 0 );
 }
 
 static struct
