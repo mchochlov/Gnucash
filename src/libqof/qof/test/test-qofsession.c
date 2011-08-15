@@ -987,6 +987,157 @@ test_qof_session_begin( Fixture *fixture, gconstpointer pData )
     unregister_all_providers();
 }
 
+static struct
+{
+    QofBackend *be;
+    QofBook *book;
+    QofSession *session;
+    const char *book_id;
+    gboolean sync_called;
+    gboolean backend_new_called;
+    gboolean session_begin_called;
+} session_save_struct;
+
+static void
+mock_sync( QofBackend *be, QofBook *book )
+{
+    g_assert( be );
+    g_assert( book );
+    g_assert( be == session_save_struct.be );
+    g_assert( book == session_save_struct.book );
+    session_save_struct.sync_called = TRUE;
+}
+
+static void
+mock_session_begin_for_save( QofBackend *be, QofSession *session, const char *book_id,
+			     gboolean ignore_lock, gboolean create, gboolean force )
+{
+    g_assert( be );
+    g_assert( be == session_save_struct.be );
+    g_assert( session );
+    g_assert( session == session_save_struct.session );
+    g_assert( book_id );
+    g_assert_cmpstr( book_id, ==, session_save_struct.book_id );
+    g_assert( ignore_lock );
+    g_assert( create );
+    g_assert( force );
+    session_save_struct.session_begin_called = TRUE;
+}
+
+static QofBackend* 
+mock_backend_new_for_save( void )
+{
+    QofBackend *be = NULL;
+    
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    be->session_begin = mock_session_begin_for_save;
+    be->sync = mock_sync;
+    session_save_struct.be = be;
+    session_save_struct.backend_new_called = TRUE;
+    return be;
+}
+
+static void
+test_qof_session_save( Fixture *fixture, gconstpointer pData )
+{
+    QofBook *book = NULL;
+    QofBackend *be = NULL;
+    QofBackendProvider *prov = NULL, *reg_prov = NULL;
+    
+    g_test_message( "Test when book not partial and backend not set" );
+    g_assert( fixture->session->backend == NULL );
+    book = qof_session_get_book( fixture->session );
+    g_assert( book );
+    qof_book_set_data( book, PARTIAL_QOFBOOK, GINT_TO_POINTER( FALSE ) );
+    qof_session_push_error( fixture->session, ERR_BACKEND_DATA_CORRUPT, "push any error");
+    g_assert_cmpint( fixture->session->lock, ==, 1 );
+    qof_session_save( fixture->session, NULL );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_HANDLER );
+    g_assert_cmpstr( qof_session_get_error_message( fixture->session ), ==, "failed to load backend" );
+    g_assert_cmpint( fixture->session->lock, ==, 1 );
+    
+    g_test_message( "Test when book not partial and backend set; imitate error" );
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    be->sync = mock_sync;
+    fixture->session->backend = be;
+    g_assert_cmpint( fixture->session->lock, ==, 1 );
+    session_save_struct.sync_called = FALSE;
+    session_save_struct.be = be;
+    session_save_struct.book = book;
+    qof_backend_set_error( be, ERR_BACKEND_DATA_CORRUPT );
+    qof_backend_set_message( be, "push any error" );
+    qof_session_save( fixture->session, percentage_fn );
+    g_assert( qof_book_get_backend( book ) == be );
+    g_assert( be->percentage == percentage_fn );
+    g_assert( session_save_struct.sync_called );
+    g_assert_cmpint( fixture->session->lock, ==, 1 );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_DATA_CORRUPT );
+    g_assert_cmpstr( qof_session_get_error_message( fixture->session ), ==, "" );
+    
+    g_test_message( "Test when book not partial and backend set; successful save" );
+    g_assert_cmpint( fixture->session->lock, ==, 1 );
+    session_save_struct.sync_called = FALSE;
+    qof_session_save( fixture->session, percentage_fn );
+    g_assert( qof_book_get_backend( book ) == be );
+    g_assert( be->percentage == percentage_fn );
+    g_assert( session_save_struct.sync_called );
+    g_assert_cmpint( fixture->session->lock, ==, 1 );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_ERR );
+    
+    /* change backend testing 
+     * code probably should be moved to separate routine or some existing code can be reused
+     * for example: qof_session_load_backend
+     */
+    g_test_message( "Test when book is partial and current backend supports it; successful save backend not changed" );
+    prov = g_new0( QofBackendProvider, 1 );
+    prov->partial_book_supported = TRUE;
+    fixture->session->backend->provider = prov;
+    g_assert_cmpint( fixture->session->lock, ==, 1 );
+    qof_book_set_data( book, PARTIAL_QOFBOOK, GINT_TO_POINTER( TRUE ) );
+    session_save_struct.sync_called = FALSE;
+    qof_session_save( fixture->session, percentage_fn );
+    g_assert( fixture->session->backend == be );
+    g_assert( fixture->session->backend->provider == prov );
+    g_assert( qof_book_get_backend( book ) == be );
+    g_assert( be->percentage == percentage_fn );
+    g_assert( session_save_struct.sync_called );
+    g_assert_cmpint( fixture->session->lock, ==, 1 );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_ERR );
+    
+    g_test_message( "Test when book is partial and current backend does not support it; backend should be changed" );
+    prov->partial_book_supported = FALSE;
+    g_assert_cmpint( fixture->session->lock, ==, 1 );
+    reg_prov = g_new0( QofBackendProvider, 1 );
+    reg_prov->partial_book_supported = TRUE;
+    reg_prov->backend_new = mock_backend_new_for_save;
+    qof_backend_register_provider( reg_prov );
+    g_assert_cmpint( g_slist_length( get_provider_list() ), ==, 1 );
+    session_save_struct.book = book;
+    session_save_struct.session = fixture->session;
+    fixture->session->book_id = g_strdup( "my book" );
+    session_save_struct.book_id = "my book";
+    session_save_struct.sync_called = FALSE;
+    session_save_struct.backend_new_called = FALSE;
+    session_save_struct.session_begin_called = FALSE;
+    
+    qof_session_save( fixture->session, percentage_fn );
+    
+    g_assert( session_save_struct.backend_new_called );
+    g_assert( fixture->session->backend == session_save_struct.be );
+    g_assert( fixture->session->backend->provider == reg_prov );
+    g_assert( fixture->session->book_id == NULL );
+    g_assert( session_save_struct.session_begin_called );
+    g_assert( qof_book_get_backend( book ) == session_save_struct.be );
+    g_assert( session_save_struct.sync_called );
+    g_assert_cmpint( fixture->session->lock, ==, 1 );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_ERR );
+    
+    unregister_all_providers();
+    g_free( prov );
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -996,4 +1147,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof session load backend", Fixture, NULL, setup, test_qof_session_load_backend, teardown );
     GNC_TEST_ADD( suitename, "qof session load", Fixture, NULL, setup, test_qof_session_load, teardown );
     GNC_TEST_ADD( suitename, "qof session begin", Fixture, NULL, setup, test_qof_session_begin, teardown );
+    GNC_TEST_ADD( suitename, "qof session save", Fixture, NULL, setup, test_qof_session_save, teardown );
 }
