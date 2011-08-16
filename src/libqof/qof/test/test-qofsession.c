@@ -1357,6 +1357,59 @@ test_qof_session_swap_data( Fixture *fixture, gconstpointer pData )
     qof_session_destroy( session2 );
 }
 
+static struct
+{
+    QofBackend *be;
+    gboolean called;
+} events_struct;
+
+static gboolean
+mock_events_fn( QofBackend *be )
+{
+    g_assert( be );
+    g_assert( be == events_struct.be );
+    events_struct.called = TRUE;
+    return TRUE;
+}
+
+static void
+test_qof_session_events( Fixture *fixture, gconstpointer pData )
+{
+    QofBackend *be = NULL;
+    
+    g_test_message( "Test pending events null checks" );
+    g_assert( !qof_session_events_pending( NULL ) );
+    g_assert( !fixture->session->backend );
+    g_assert( !qof_session_events_pending( fixture->session ) );
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    be->events_pending = NULL;
+    fixture->session->backend = be;
+    g_assert( !qof_session_events_pending( fixture->session ) );
+    
+    g_test_message( "Test pending events callback" );
+    be->events_pending = mock_events_fn;
+    events_struct.called = FALSE;
+    events_struct.be = be;
+    g_assert( qof_session_events_pending( fixture->session ) );
+    g_assert( events_struct.called );
+    
+    g_test_message( "Test process events null checks" );
+    g_assert( !qof_session_process_events( NULL ) );
+    fixture->session->backend = NULL;
+    g_assert( !qof_session_process_events( fixture->session ) );
+    be->process_events = NULL;
+    fixture->session->backend = be;
+    g_assert( !qof_session_process_events( fixture->session ) );
+    
+    g_test_message( "Test process events callback" );
+    be->process_events = mock_events_fn;
+    events_struct.called = FALSE;
+    events_struct.be = be;
+    g_assert( qof_session_process_events( fixture->session ) );
+    g_assert( events_struct.called );
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -1372,4 +1425,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof session end", Fixture, NULL, setup, test_qof_session_end, teardown );
     GNC_TEST_ADD( suitename, "qof session export", Fixture, NULL, setup, test_qof_session_export, teardown );
     GNC_TEST_ADD( suitename, "qof session swap data", Fixture, NULL, setup, test_qof_session_swap_data, teardown );
+    GNC_TEST_ADD( suitename, "qof session events", Fixture, NULL, setup, test_qof_session_events, teardown );
 }
