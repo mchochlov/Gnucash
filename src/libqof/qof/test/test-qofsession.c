@@ -1306,6 +1306,57 @@ test_qof_session_export( Fixture *fixture, gconstpointer pData )
     qof_session_destroy( real_session );
 }
 
+static void
+test_qof_session_swap_data( Fixture *fixture, gconstpointer pData )
+{
+    QofSession *session2 = NULL;
+    QofBackend *be1 = NULL, *be2 = NULL;
+    GList *books1 = NULL, *books2 = NULL, *node;
+    
+    /* init */
+    g_assert( fixture->session );
+    session2 = qof_session_new();
+    g_assert( session2 );
+    g_assert( fixture->session != session2 );
+    be1 = g_new0( QofBackend, 1 );
+    g_assert( be1 );
+    be2 = g_new0( QofBackend, 1 );
+    g_assert( be2 );
+    fixture->session->backend = be1;
+    session2->backend = be2;
+    books1 = fixture->session->books;
+    books2 = session2->books;
+    g_assert( books1 );
+    g_assert( books2 );
+    for (node = books1; node; node = node->next)
+    {
+        QofBook *book_1 = node->data;
+        qof_book_set_backend (book_1, fixture->session->backend);
+    }
+    for (node = books2; node; node = node->next)
+    {
+        QofBook *book_2 = node->data;
+        qof_book_set_backend (book_2, session2->backend);
+    }
+    
+    g_test_message( "Test book lists are swapped and backend for each book is swapped" );
+    qof_session_swap_data( fixture->session, session2 );
+    g_assert( fixture->session->books == books2 );
+    g_assert( session2->books == books1 );
+    for (node = books1; node; node = node->next)
+    {
+        QofBook *book_1 = node->data;
+        g_assert( qof_book_get_backend( book_1 ) == be2 );
+    }
+    for (node = books2; node; node = node->next)
+    {
+        QofBook *book_2 = node->data;
+        g_assert( qof_book_get_backend( book_2 ) == be1 );
+    }
+    
+    qof_session_destroy( session2 );
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -1320,4 +1371,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof session destroy backend", Fixture, NULL, setup, test_qof_session_destroy_backend, teardown );
     GNC_TEST_ADD( suitename, "qof session end", Fixture, NULL, setup, test_qof_session_end, teardown );
     GNC_TEST_ADD( suitename, "qof session export", Fixture, NULL, setup, test_qof_session_export, teardown );
+    GNC_TEST_ADD( suitename, "qof session swap data", Fixture, NULL, setup, test_qof_session_swap_data, teardown );
 }
