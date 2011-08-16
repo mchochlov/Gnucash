@@ -73,6 +73,33 @@ teardown( Fixture *fixture, gconstpointer pData )
 }
 
 static void
+test_qof_session_new_destroy( void )
+{
+    QofSession *session = NULL;
+    QofBook *book = NULL;
+    
+    g_test_message( "Test session initialization" );
+    session = qof_session_new();
+    g_assert( session );
+    g_assert_cmpstr( session->entity.e_type, ==, QOF_ID_SESSION );
+    g_assert( session->books );
+    g_assert_cmpint( g_list_length( session->books ), ==, 1 );
+    book = ( QofBook* ) session->books->data;
+    g_assert( book );
+    g_assert( QOF_IS_BOOK( book ) );
+    g_assert( !session->book_id );
+    g_assert( !session->backend );
+    g_assert_cmpint( session->lock, ==, 1 );
+    g_assert_cmpint( qof_session_get_error( session ), ==, ERR_BACKEND_NO_ERR );
+    
+    g_test_message( "Test session destroy" );
+    qof_session_destroy( session );
+    /* all data structures of session get deallocated so we can't really test this place
+     * instead qof_session_destroy_backend and qof_session_end are tested
+     */
+}
+
+static void
 test_session_safe_save( Fixture *fixture, gconstpointer pData )
 {
     fixture->session->backend = g_new0( QofBackend, 1 );
@@ -1141,6 +1168,7 @@ test_qof_session_save( Fixture *fixture, gconstpointer pData )
 void
 test_suite_qofsession ( void )
 {
+    GNC_TEST_ADD_FUNC( suitename, "qof session new and destroy", test_qof_session_new_destroy );
     GNC_TEST_ADD( suitename, "qof session safe save", Fixture, NULL, setup, test_session_safe_save, teardown );
     GNC_TEST_ADD( suitename, "qof instance foreach copy", Fixture, NULL, setup, test_qof_instance_foreach_copy, teardown );
     GNC_TEST_ADD( suitename, "qof instance list foreach", Fixture, NULL, setup, test_qof_instance_list_foreach, teardown );
