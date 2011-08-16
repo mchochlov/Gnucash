@@ -1449,6 +1449,36 @@ test_qof_session_data_loaded( Fixture *fixture, gconstpointer pData )
     g_assert_cmpstr( qof_session_get_error_message( fixture->session ), ==, "" );
 }
 
+static void
+test_qof_backend_get_access_method_list( Fixture *fixture, gconstpointer pData )
+{
+    GList *list = NULL;
+    const char *access_methods[4] = { "file", "http", "postgres", "sqlite" };
+    int i;
+
+    for ( i = 0; i < 4; i++ )
+    {
+	QofBackendProvider *prov = g_new0( QofBackendProvider, 1 );
+	g_assert( prov );
+	prov->access_method = access_methods[ i ];
+	qof_backend_register_provider( prov );
+	g_assert_cmpint( g_slist_length( get_provider_list() ), ==, ( i + 1 ) );
+    }
+    g_assert_cmpint( g_slist_length( get_provider_list() ), ==, 4 );
+    
+    g_test_message( "Test list of access methods is returned" );
+    list = qof_backend_get_registered_access_method_list();
+    g_assert( list );
+    g_assert_cmpint( g_list_length( list ), ==, 4 );
+    g_assert_cmpstr( g_list_nth_data( list, 0 ), ==, "file" );
+    g_assert_cmpstr( g_list_nth_data( list, 1 ), ==, "http" );
+    g_assert_cmpstr( g_list_nth_data( list, 2 ), ==, "postgres" );
+    g_assert_cmpstr( g_list_nth_data( list, 3 ), ==, "sqlite" );
+    
+    g_list_free( list );
+    unregister_all_providers();
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -1466,4 +1496,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof session swap data", Fixture, NULL, setup, test_qof_session_swap_data, teardown );
     GNC_TEST_ADD( suitename, "qof session events", Fixture, NULL, setup, test_qof_session_events, teardown );
     GNC_TEST_ADD( suitename, "qof session data loaded", Fixture, NULL, setup, test_qof_session_data_loaded, teardown );
+    GNC_TEST_ADD( suitename, "qof backend access method list", Fixture, NULL, setup, test_qof_backend_get_access_method_list, teardown );
 }
