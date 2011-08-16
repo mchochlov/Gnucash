@@ -1238,6 +1238,74 @@ test_qof_session_end( Fixture *fixture, gconstpointer pData )
     g_assert( !fixture->session->book_id );
 }
 
+static struct
+{
+    QofBackend *be;
+    QofBook *book;
+    gboolean called;
+} session_export_struct;
+
+static void
+mock_export( QofBackend *be, QofBook *book )
+{
+    g_assert( be );
+    g_assert( session_export_struct.be == be );
+    g_assert( book );
+    g_assert( session_export_struct.book == book );
+    session_export_struct.called = TRUE;
+}
+
+static void
+test_qof_session_export( Fixture *fixture, gconstpointer pData )
+{
+    QofSession *real_session = NULL;
+    QofBook *tmp_book = NULL, *real_book = NULL;
+    QofBackend *be = NULL;
+    
+    real_session = qof_session_new();
+    g_assert( real_session );
+    
+    g_test_message( "Test null checks" );
+    g_assert( !qof_session_export( NULL, real_session, percentage_fn ) );
+    g_assert( !qof_session_export( fixture->session, NULL, percentage_fn ) );
+    
+    g_test_message( "Test with backend not set" );
+    tmp_book = qof_session_get_book( fixture->session );
+    g_assert( tmp_book );
+    be = qof_book_get_backend( tmp_book );
+    g_assert( !be );
+    g_assert( !qof_session_export( fixture->session, real_session, percentage_fn ) );
+    
+    g_test_message( "Test with backend set" );
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    fixture->session->backend = be;
+    qof_book_set_backend( tmp_book, be );
+    g_assert( !be->percentage );
+    g_assert( qof_session_export( fixture->session, real_session, percentage_fn ) );
+    g_assert( be->percentage == percentage_fn );
+    
+    g_test_message( "Test with backend export function set and error is produced" );
+    be->export_fn = mock_export;
+    qof_backend_set_error( be, ERR_BACKEND_DATA_CORRUPT );
+    qof_backend_set_message( be, "push any error" );
+    session_export_struct.called = FALSE;
+    real_book = qof_session_get_book( real_session );
+    g_assert( real_book );
+    session_export_struct.be = be;
+    session_export_struct.book = real_book;
+    g_assert( !qof_session_export( fixture->session, real_session, percentage_fn ) );
+    g_assert( session_export_struct.called );
+    
+    g_test_message( "Test with backend export function set and no error produced" );
+    p_qof_session_clear_error( fixture->session );
+    session_export_struct.called = FALSE;
+    g_assert( qof_session_export( fixture->session, real_session, percentage_fn ) );
+    g_assert( session_export_struct.called );
+    
+    qof_session_destroy( real_session );
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -1251,4 +1319,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof session save", Fixture, NULL, setup, test_qof_session_save, teardown );
     GNC_TEST_ADD( suitename, "qof session destroy backend", Fixture, NULL, setup, test_qof_session_destroy_backend, teardown );
     GNC_TEST_ADD( suitename, "qof session end", Fixture, NULL, setup, test_qof_session_end, teardown );
+    GNC_TEST_ADD( suitename, "qof session export", Fixture, NULL, setup, test_qof_session_export, teardown );
 }
