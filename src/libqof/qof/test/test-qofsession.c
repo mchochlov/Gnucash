@@ -39,6 +39,7 @@ extern void ( *p_qof_instance_foreach_copy )( gpointer data, gpointer user_data 
 extern void ( *p_qof_instance_list_foreach )( gpointer data, gpointer user_data );
 extern void ( *p_qof_session_load_backend )( QofSession * session, const char * access_method );
 extern void ( *p_qof_session_clear_error )( QofSession * session );
+extern void ( *p_qof_session_destroy_backend )( QofSession * session );
 
 extern void init_static_qofsession_pointers( void );
 
@@ -1165,6 +1166,44 @@ test_qof_session_save( Fixture *fixture, gconstpointer pData )
     g_free( prov );
 }
 
+static struct
+{
+    QofBackend *be;
+    gboolean called;
+} destroy_backend_struct;
+
+static void
+mock_destroy_backend( QofBackend *be )
+{
+    g_assert( be );
+    g_assert( destroy_backend_struct.be == be );
+    destroy_backend_struct.called = TRUE;
+}
+
+static void
+test_qof_session_destroy_backend( Fixture *fixture, gconstpointer pData )
+{
+    QofBackend *be = NULL;
+    
+    g_test_message( "Test with destroy backend callback not set" );
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    fixture->session->backend = be;
+    p_qof_session_destroy_backend( fixture->session );
+    g_assert( !fixture->session->backend );
+    
+    g_test_message( "Test with destroy backend callback set" );
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    be->destroy_backend = mock_destroy_backend;
+    fixture->session->backend = be;
+    destroy_backend_struct.called = FALSE;
+    destroy_backend_struct.be = be;
+    p_qof_session_destroy_backend( fixture->session );
+    g_assert( !fixture->session->backend );
+    g_assert( destroy_backend_struct.called );
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -1176,4 +1215,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof session load", Fixture, NULL, setup, test_qof_session_load, teardown );
     GNC_TEST_ADD( suitename, "qof session begin", Fixture, NULL, setup, test_qof_session_begin, teardown );
     GNC_TEST_ADD( suitename, "qof session save", Fixture, NULL, setup, test_qof_session_save, teardown );
+    GNC_TEST_ADD( suitename, "qof session destroy backend", Fixture, NULL, setup, test_qof_session_destroy_backend, teardown );
 }
