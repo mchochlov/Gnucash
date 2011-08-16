@@ -1410,6 +1410,45 @@ test_qof_session_events( Fixture *fixture, gconstpointer pData )
     g_assert( events_struct.called );
 }
 
+static struct
+{
+    QofBackend *be;
+    QofBook *book;
+    gboolean called;
+} data_load_struct;
+
+static void 
+mock_all_data_load( QofBackend *be, QofBook *book, QofBackendLoadType type )
+{
+    g_assert( be );
+    g_assert( book );
+    g_assert( be == data_load_struct.be );
+    g_assert( book == data_load_struct.book );
+    g_assert_cmpint( type, ==, LOAD_TYPE_LOAD_ALL );
+    qof_backend_set_error( be, ERR_BACKEND_DATA_CORRUPT );
+    data_load_struct.called = TRUE;
+}
+
+static void
+test_qof_session_data_loaded( Fixture *fixture, gconstpointer pData )
+{
+    QofBackend *be = NULL;
+    
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    be->load = mock_all_data_load;
+    fixture->session->backend = be;
+    
+    g_test_message( "Test load callback and artificial error" );
+    data_load_struct.be = be;
+    data_load_struct.book = qof_session_get_book( fixture->session );
+    data_load_struct.called = FALSE;
+    qof_session_ensure_all_data_loaded( fixture->session );
+    g_assert( data_load_struct.called );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_DATA_CORRUPT );
+    g_assert_cmpstr( qof_session_get_error_message( fixture->session ), ==, "" );
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -1426,4 +1465,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof session export", Fixture, NULL, setup, test_qof_session_export, teardown );
     GNC_TEST_ADD( suitename, "qof session swap data", Fixture, NULL, setup, test_qof_session_swap_data, teardown );
     GNC_TEST_ADD( suitename, "qof session events", Fixture, NULL, setup, test_qof_session_events, teardown );
+    GNC_TEST_ADD( suitename, "qof session data loaded", Fixture, NULL, setup, test_qof_session_data_loaded, teardown );
 }
