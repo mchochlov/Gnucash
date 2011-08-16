@@ -1479,6 +1479,45 @@ test_qof_backend_get_access_method_list( Fixture *fixture, gconstpointer pData )
     unregister_all_providers();
 }
 
+static void
+test_qof_session_add_book( Fixture *fixture, gconstpointer pData )
+{
+    QofBook *book = NULL, *closed_book = NULL, *open_book = NULL;
+    QofBackend *be = NULL;
+    
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    fixture->session->backend = be;
+    g_test_message( "Test that adding the same book will result in books list staying untouched" );
+    g_assert_cmpint( g_list_length( fixture->session->books ), ==, 1 );
+    book = qof_session_get_book( fixture->session );
+    qof_session_add_book( fixture->session, book );
+    g_assert_cmpint( g_list_length( fixture->session->books ), ==, 1 );
+    g_assert( book == qof_session_get_book( fixture->session ) );
+    
+    g_test_message( "Test that adding new closed book will result in book being appended to the list" );
+    closed_book = qof_book_new();
+    g_assert( closed_book );
+    qof_book_mark_closed( closed_book );
+    qof_session_add_book( fixture->session, closed_book );
+    g_assert_cmpint( g_list_length( fixture->session->books ), ==, 2 );
+    g_assert( g_list_nth_data( fixture->session->books, 0 ) == book );
+    g_assert( g_list_nth_data( fixture->session->books, 1 ) == closed_book );
+    g_assert( qof_book_get_backend( closed_book ) == be );
+    
+    g_test_message( "Test that adding new open book will result in old books list being destroyed" );
+    open_book = qof_book_new();
+    g_assert( open_book );
+    qof_session_add_book( fixture->session, open_book );
+    g_assert( fixture->session->books );
+    g_assert_cmpint( g_list_length( fixture->session->books ), ==, 1 );
+    g_assert( g_list_nth_data( fixture->session->books, 0 ) == open_book );
+    g_assert( qof_book_get_backend( open_book ) == be );
+    
+    qof_book_destroy( book );
+    qof_book_destroy( closed_book );
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -1497,4 +1536,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof session events", Fixture, NULL, setup, test_qof_session_events, teardown );
     GNC_TEST_ADD( suitename, "qof session data loaded", Fixture, NULL, setup, test_qof_session_data_loaded, teardown );
     GNC_TEST_ADD( suitename, "qof backend access method list", Fixture, NULL, setup, test_qof_backend_get_access_method_list, teardown );
+    GNC_TEST_ADD( suitename, "qof session add book", Fixture, NULL, setup, test_qof_session_add_book, teardown );
 }
