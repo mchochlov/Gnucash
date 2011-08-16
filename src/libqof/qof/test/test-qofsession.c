@@ -1204,6 +1204,40 @@ test_qof_session_destroy_backend( Fixture *fixture, gconstpointer pData )
     g_assert( destroy_backend_struct.called );
 }
 
+static struct
+{
+    QofBackend *be;
+    gboolean called;
+} session_end_struct;
+
+static void
+mock_session_end( QofBackend *be )
+{
+    g_assert( be );
+    g_assert( session_end_struct.be == be );
+    session_end_struct.called = TRUE;
+}
+
+static void
+test_qof_session_end( Fixture *fixture, gconstpointer pData )
+{
+    QofBackend *be = NULL;
+    
+    g_test_message( "Test backend is closed, errors cleared and book_id removed" );
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    be->session_end = mock_session_end;
+    fixture->session->backend = be;
+    qof_session_push_error( fixture->session, ERR_BACKEND_DATA_CORRUPT, "push any error");
+    fixture->session->book_id = g_strdup( "my book" );
+    session_end_struct.called = FALSE;
+    session_end_struct.be = be;
+    qof_session_end( fixture->session );
+    g_assert( session_end_struct.called );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_ERR );
+    g_assert( !fixture->session->book_id );
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -1216,4 +1250,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof session begin", Fixture, NULL, setup, test_qof_session_begin, teardown );
     GNC_TEST_ADD( suitename, "qof session save", Fixture, NULL, setup, test_qof_session_save, teardown );
     GNC_TEST_ADD( suitename, "qof session destroy backend", Fixture, NULL, setup, test_qof_session_destroy_backend, teardown );
+    GNC_TEST_ADD( suitename, "qof session end", Fixture, NULL, setup, test_qof_session_end, teardown );
 }
