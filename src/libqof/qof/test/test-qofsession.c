@@ -1518,6 +1518,33 @@ test_qof_session_add_book( Fixture *fixture, gconstpointer pData )
     qof_book_destroy( closed_book );
 }
 
+static void
+test_qof_session_get_book( Fixture *fixture, gconstpointer pData )
+{
+    QofBook *book = NULL;
+    
+    g_test_message( "Test null check" );
+    g_assert( !qof_session_get_book( NULL ) );
+    
+    g_test_message( "Test open book is returned" );
+    g_assert( fixture->session->books );
+    g_assert_cmpint( g_list_length( fixture->session->books ), ==, 1 );
+    book = qof_session_get_book( fixture->session );
+    g_assert( book );
+    g_assert_cmpuint( book->book_open, ==, 'y' );
+    
+    g_test_message( "Test when book is closed null returned" );
+    qof_book_mark_closed( book );
+    g_assert( !qof_session_get_book( fixture->session ) );
+    
+    g_test_message( "Test if there are no books null is returned" );
+    /* this is very unlikely but still could happen */
+    qof_book_destroy( book );
+    g_list_free( fixture->session->books );
+    fixture->session->books = NULL;
+    g_assert( !qof_session_get_book( fixture->session ) );
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -1537,4 +1564,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof session data loaded", Fixture, NULL, setup, test_qof_session_data_loaded, teardown );
     GNC_TEST_ADD( suitename, "qof backend access method list", Fixture, NULL, setup, test_qof_backend_get_access_method_list, teardown );
     GNC_TEST_ADD( suitename, "qof session add book", Fixture, NULL, setup, test_qof_session_add_book, teardown );
+    GNC_TEST_ADD( suitename, "qof session get book", Fixture, NULL, setup, test_qof_session_get_book, teardown );
 }
