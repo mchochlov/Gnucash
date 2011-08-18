@@ -31,6 +31,7 @@
 static const gchar *suitename = "/qof/qofsession";
 void test_suite_qofsession ( void );
 
+extern GHookList* get_session_closed_hooks( void );
 extern GSList* get_provider_list( void );
 extern gboolean get_qof_providers_initialized( void );
 extern void unregister_all_providers( void );

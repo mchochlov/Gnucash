@@ -62,9 +62,13 @@ static gboolean qof_providers_initialized = FALSE;
  * They should be removed when no longer needed
  */
 
+GHookList* get_session_closed_hooks( void );
 GSList* get_provider_list( void );
 gboolean get_qof_providers_initialized( void );
 void unregister_all_providers( void );
+
+GHookList*
+get_session_closed_hooks( void ) { return session_closed_hooks; }
 
 GSList* 
 get_provider_list( void ) { return provider_list; }
