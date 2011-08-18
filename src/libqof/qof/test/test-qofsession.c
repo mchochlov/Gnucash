@@ -39,7 +39,6 @@ extern void unregister_all_providers( void );
 extern void ( *p_qof_session_load_backend )( QofSession * session, const char * access_method );
 extern void ( *p_qof_session_clear_error )( QofSession * session );
 extern void ( *p_qof_session_destroy_backend )( QofSession * session );
-extern void ( *p_qof_session_clear_error )( QofSession *session );
 
 extern void init_static_qofsession_pointers( void );
 
