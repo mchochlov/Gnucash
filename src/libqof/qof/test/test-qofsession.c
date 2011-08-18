@@ -40,6 +40,7 @@ extern void ( *p_qof_instance_list_foreach )( gpointer data, gpointer user_data 
 extern void ( *p_qof_session_load_backend )( QofSession * session, const char * access_method );
 extern void ( *p_qof_session_clear_error )( QofSession * session );
 extern void ( *p_qof_session_destroy_backend )( QofSession * session );
+extern void ( *p_qof_session_clear_error )( QofSession *session );
 
 extern void init_static_qofsession_pointers( void );
 
@@ -1570,6 +1571,25 @@ test_qof_session_get_error( Fixture *fixture, gconstpointer pData )
     g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_CANT_CONNECT );
 }
 
+static void
+test_qof_session_clear_error( Fixture *fixture, gconstpointer pData )
+{
+    QofBackend *be = NULL;
+    
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    
+    g_test_message( "Test session and backend errors are cleared" );
+    qof_session_push_error( fixture->session, ERR_BACKEND_NO_SUCH_DB, "push any error" );
+    fixture->session->backend = be;
+    qof_backend_set_error( be, ERR_BACKEND_CANT_CONNECT );
+    p_qof_session_clear_error( fixture->session );
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_ERR );
+    g_assert_cmpstr( qof_session_get_error_message( fixture->session ), ==, "" );
+    g_assert( !fixture->session->error_message );
+    g_assert_cmpint( qof_backend_get_error( be ), ==, ERR_BACKEND_NO_ERR );
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -1591,4 +1611,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof session add book", Fixture, NULL, setup, test_qof_session_add_book, teardown );
     GNC_TEST_ADD( suitename, "qof session get book", Fixture, NULL, setup, test_qof_session_get_book, teardown );
     GNC_TEST_ADD( suitename, "qof session get error", Fixture, NULL, setup, test_qof_session_get_error, teardown );
+    GNC_TEST_ADD( suitename, "qof session clear error", Fixture, NULL, setup, test_qof_session_clear_error, teardown );
 }

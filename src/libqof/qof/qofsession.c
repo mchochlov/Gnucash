@@ -1669,6 +1669,7 @@ void ( *p_qof_instance_list_foreach )( gpointer data, gpointer user_data );
 void ( *p_qof_session_load_backend )( QofSession * session, const char * access_method );
 void ( *p_qof_session_clear_error )( QofSession *session );
 void ( *p_qof_session_destroy_backend )( QofSession *session );
+void ( *p_qof_session_clear_error )( QofSession *session );
 
 void
 init_static_qofsession_pointers( void )
@@ -1678,6 +1679,7 @@ init_static_qofsession_pointers( void )
     p_qof_session_load_backend = qof_session_load_backend;
     p_qof_session_clear_error = qof_session_clear_error;
     p_qof_session_destroy_backend = qof_session_destroy_backend;
+    p_qof_session_clear_error = qof_session_clear_error;
 }
 
 /* =================== END OF FILE ====================================== */
