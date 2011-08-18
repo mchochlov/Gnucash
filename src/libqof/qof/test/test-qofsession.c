@@ -1545,6 +1545,31 @@ test_qof_session_get_book( Fixture *fixture, gconstpointer pData )
     g_assert( !qof_session_get_book( fixture->session ) );
 }
 
+static void
+test_qof_session_get_error( Fixture *fixture, gconstpointer pData )
+{
+    QofBackend *be = NULL;
+    
+    g_test_message( "Test if session is null" );
+    g_assert_cmpint( qof_session_get_error( NULL ), ==, ERR_BACKEND_NO_BACKEND );
+    
+    g_test_message( "Test when there is a local error" );
+    fixture->session->last_err = ERR_BACKEND_DATA_CORRUPT; /* just any error */
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_DATA_CORRUPT );
+    
+    g_test_message( "Test if session backend is null" );
+    g_assert( !fixture->session->backend );
+    fixture->session->last_err = ERR_BACKEND_NO_ERR;
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_NO_ERR );
+    
+    g_test_message( "Test for backend error" );
+    be = g_new0( QofBackend, 1 );
+    g_assert( be );
+    qof_backend_set_error( be, ERR_BACKEND_CANT_CONNECT );
+    fixture->session->backend = be;
+    g_assert_cmpint( qof_session_get_error( fixture->session ), ==, ERR_BACKEND_CANT_CONNECT );
+}
+
 void
 test_suite_qofsession ( void )
 {
@@ -1565,4 +1590,5 @@ test_suite_qofsession ( void )
     GNC_TEST_ADD( suitename, "qof backend access method list", Fixture, NULL, setup, test_qof_backend_get_access_method_list, teardown );
     GNC_TEST_ADD( suitename, "qof session add book", Fixture, NULL, setup, test_qof_session_add_book, teardown );
     GNC_TEST_ADD( suitename, "qof session get book", Fixture, NULL, setup, test_qof_session_get_book, teardown );
+    GNC_TEST_ADD( suitename, "qof session get error", Fixture, NULL, setup, test_qof_session_get_error, teardown );
 }
