@@ -65,12 +65,17 @@ static void
 setup( Fixture *fixture, gconstpointer pData )
 {
     fixture->session = qof_session_new();
+    init_static_qofsession_pointers();
+    g_assert( p_qof_session_clear_error && p_qof_session_destroy_backend && p_qof_session_load_backend );
 }
 
 static void
 teardown( Fixture *fixture, gconstpointer pData )
 {
     qof_session_destroy( fixture->session );
+    p_qof_session_clear_error = NULL;
+    p_qof_session_destroy_backend = NULL;
+    p_qof_session_load_backend = NULL;
 }
 
 static void
@@ -148,7 +153,6 @@ test_qof_session_load_backend( Fixture *fixture, gconstpointer pData )
     
     /* init */
     prov = g_new0( QofBackendProvider, 1 );
-    init_static_qofsession_pointers();
     
     g_test_message( "Test when no provider is registered" );
     g_assert( !get_qof_providers_initialized() );
