@@ -266,7 +266,7 @@ test_qof_session_load( Fixture *fixture, gconstpointer pData )
     g_assert( newbook );
     g_assert( load_session_struct.oldbook != newbook );
     g_assert_cmpint( g_list_length( fixture->session->books ), ==, 1 );
-    load_session_struct.load_called = TRUE;
+    g_assert( load_session_struct.load_called );
     
     g_test_message( "Test when no is produced" );
     load_session_struct.oldbook = qof_session_get_book( fixture->session );
@@ -278,7 +278,7 @@ test_qof_session_load( Fixture *fixture, gconstpointer pData )
     g_assert( newbook );
     g_assert( load_session_struct.oldbook == newbook );
     g_assert_cmpint( g_list_length( fixture->session->books ), ==, 1 );
-    load_session_struct.load_called = TRUE;
+    g_assert( load_session_struct.load_called );
 }
 
 static struct
